@@ -1,0 +1,29 @@
+{
+  "name": "@graphile-contrib/pg-omit-archived",
+  "version": "0.0.0",
+  "description": "Makes collections omit archived items by default, but gives the ability to view archived items if explicitly requested.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "postgraphile",
+    "graphile-build",
+    "graphile-engine",
+    "archive",
+    "soft",
+    "delete",
+    "hidden"
+  ],
+  "author": "Benjie Gillam <code@benjiegillam.com>",
+  "license": "MIT",
+  "dependencies": {
+    "graphile-utils": "^4.0.0"
+  },
+  "devDependencies": {
+    "graphql": "0.13.x",
+    "jest": "^23.6.0",
+    "pg": "^7.5.0",
+    "postgraphile": "^4.0.0"
+  }
+}
