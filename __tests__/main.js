@@ -26,6 +26,10 @@ insert into omit_archived.children (id, parent_id, name, is_archived) values
   (3001, 1, 'Third child 1', false), (3002, 1, 'Third child 2', true), (3003, 1, 'Third child 3', false);
 `;
 
+function iderize(...ids) {
+  return ids.map(id => ({ id }));
+}
+
 let pgPool;
 let schema;
 const options = {
@@ -66,6 +70,7 @@ function check(query, expected) {
       }
     );
 }
+
 describe("parents", () => {
   test(
     "Omits archived parents by default",
@@ -77,7 +82,7 @@ describe("parents", () => {
         }
       }
     }`,
-      { allParents: { nodes: [{ id: 1 }, { id: 3 }] } }
+      { allParents: { nodes: iderize(1, 3) } }
     )
   );
 
@@ -91,7 +96,7 @@ describe("parents", () => {
         }
       }
     }`,
-      { allParents: { nodes: [{ id: 1 }, { id: 3 }] } }
+      { allParents: { nodes: iderize(1, 3) } }
     )
   );
 
@@ -105,7 +110,7 @@ describe("parents", () => {
         }
       }
     }`,
-      { allParents: { nodes: [{ id: 1 }, { id: 2 }, { id: 3 }] } }
+      { allParents: { nodes: iderize(1, 2, 3) } }
     )
   );
 
@@ -119,7 +124,69 @@ describe("parents", () => {
         }
       }
     }`,
-      { allParents: { nodes: [{ id: 2 }] } }
+      { allParents: { nodes: iderize(2) } }
+    )
+  );
+});
+
+describe("children", () => {
+  test(
+    "Omits archived children by default",
+    check(
+      `{
+      allChildren {
+        nodes {
+          id
+        }
+      }
+    }`,
+      { allChildren: { nodes: iderize(1001, 1003, 2001, 2003, 3001, 3003) } }
+    )
+  );
+
+  test(
+    "Omits archived children when NO",
+    check(
+      `{
+      allChildren(includeArchived: NO) {
+        nodes {
+          id
+        }
+      }
+    }`,
+      { allChildren: { nodes: iderize(1001, 1003, 2001, 2003, 3001, 3003) } }
+    )
+  );
+
+  test(
+    "Includes everything when YES",
+    check(
+      `{
+      allChildren(includeArchived: YES) {
+        nodes {
+          id
+        }
+      }
+    }`,
+      {
+        allChildren: {
+          nodes: iderize(1001, 1002, 1003, 2001, 2002, 2003, 3001, 3002, 3003),
+        },
+      }
+    )
+  );
+
+  test(
+    "Includes only archived when EXCLUSIVELY",
+    check(
+      `{
+      allChildren(includeArchived: EXCLUSIVELY) {
+        nodes {
+          id
+        }
+      }
+    }`,
+      { allChildren: { nodes: iderize(1002, 2002, 3002) } }
     )
   );
 });
