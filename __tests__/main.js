@@ -19,11 +19,10 @@ create table omit_archived.children (
   is_archived boolean not null default false
 );
 create index on omit_archived.children(parent_id);
-insert into omit_archived.parents (id, name, is_archived) values (1, 'First', false), (2, 'Second', true), (3, 'Third', false);
+insert into omit_archived.parents (id, name, is_archived) values (1, 'First', false), (2, 'Second', true);
 insert into omit_archived.children (id, parent_id, name, is_archived) values
-  (1001, 1, 'First child 1', false), (1002, 1, 'First child 2', true), (1003, 1, 'First child 3', false),
-  (2001, 1, 'Second child 1', false), (2002, 1, 'Second child 2', true), (2003, 1, 'Second child 3', false),
-  (3001, 1, 'Third child 1', false), (3002, 1, 'Third child 2', true), (3003, 1, 'Third child 3', false);
+  (1001, 1, 'First child 1', false), (1002, 1, 'First child 2', true),
+  (2001, 1, 'Second child 1', false), (2002, 1, 'Second child 2', true);
 `;
 
 function iderize(...ids) {
@@ -82,7 +81,7 @@ describe("parents", () => {
         }
       }
     }`,
-      { allParents: { nodes: iderize(1, 3) } }
+      { allParents: { nodes: iderize(1) } }
     )
   );
 
@@ -96,7 +95,7 @@ describe("parents", () => {
         }
       }
     }`,
-      { allParents: { nodes: iderize(1, 3) } }
+      { allParents: { nodes: iderize(1) } }
     )
   );
 
@@ -110,7 +109,7 @@ describe("parents", () => {
         }
       }
     }`,
-      { allParents: { nodes: iderize(1, 2, 3) } }
+      { allParents: { nodes: iderize(1, 2) } }
     )
   );
 
@@ -140,7 +139,7 @@ describe("children", () => {
         }
       }
     }`,
-      { allChildren: { nodes: iderize(1001, 1003, 2001, 2003, 3001, 3003) } }
+      { allChildren: { nodes: iderize(1001, 2001) } }
     )
   );
 
@@ -154,7 +153,7 @@ describe("children", () => {
         }
       }
     }`,
-      { allChildren: { nodes: iderize(1001, 1003, 2001, 2003, 3001, 3003) } }
+      { allChildren: { nodes: iderize(1001, 2001) } }
     )
   );
 
@@ -170,7 +169,7 @@ describe("children", () => {
     }`,
       {
         allChildren: {
-          nodes: iderize(1001, 1002, 1003, 2001, 2002, 2003, 3001, 3002, 3003),
+          nodes: iderize(1001, 1002, 2001, 2002),
         },
       }
     )
@@ -186,7 +185,125 @@ describe("children", () => {
         }
       }
     }`,
-      { allChildren: { nodes: iderize(1002, 2002, 3002) } }
+      { allChildren: { nodes: iderize(1002, 2002) } }
+    )
+  );
+});
+
+describe("children of parents", () => {
+  test(
+    "Omits archived parents by default",
+    check(
+      `{
+        allParents {
+          nodes {
+            id
+            childrenByParentId {
+              nodes {
+                id
+              }
+            }
+          }
+        }
+      }`,
+      {
+        allParents: {
+          nodes: [
+            {
+              id: 1,
+              childrenByParentId: { nodes: iderize(1001) },
+            },
+          ],
+        },
+      }
+    )
+  );
+
+  test(
+    "Omits archived parents when NO",
+    check(
+      `{
+        allParents(includeArchived: NO) {
+          nodes {
+            id
+            childrenByParentId {
+              nodes {
+                id
+              }
+            }
+          }
+        }
+      }`,
+      {
+        allParents: {
+          nodes: [
+            {
+              id: 1,
+              childrenByParentId: { nodes: iderize(1001) },
+            },
+          ],
+        },
+      }
+    )
+  );
+
+  test(
+    "Includes everything when YES",
+    check(
+      `{
+        allParents(includeArchived: YES) {
+          nodes {
+            id
+            childrenByParentId {
+              nodes {
+                id
+              }
+            }
+          }
+        }
+      }`,
+      {
+        allParents: {
+          nodes: [
+            {
+              id: 1,
+              childrenByParentId: { nodes: iderize(1001) },
+            },
+            {
+              id: 2,
+              childrenByParentId: { nodes: iderize(2001, 2002) },
+            },
+          ],
+        },
+      }
+    )
+  );
+
+  test(
+    "Includes only archived when EXCLUSIVELY",
+    check(
+      `{
+        allParents(includeArchived: EXCLUSIVELY) {
+          nodes {
+            id
+            childrenByParentId {
+              nodes {
+                id
+              }
+            }
+          }
+        }
+      }`,
+      {
+        allParents: {
+          nodes: [
+            {
+              id: 2,
+              childrenByParentId: { nodes: iderize(2001, 2002) },
+            },
+          ],
+        },
+      }
     )
   );
 });
