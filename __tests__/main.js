@@ -66,59 +66,60 @@ function check(query, expected) {
       }
     );
 }
-
-test(
-  "Omits archived parents by default",
-  check(
-    `{
+describe("parents", () => {
+  test(
+    "Omits archived parents by default",
+    check(
+      `{
       allParents {
         nodes {
           id
         }
       }
     }`,
-    { allParents: { nodes: [{ id: 1 }, { id: 3 }] } }
-  )
-);
+      { allParents: { nodes: [{ id: 1 }, { id: 3 }] } }
+    )
+  );
 
-test(
-  "Omits archived parents when NO",
-  check(
-    `{
+  test(
+    "Omits archived parents when NO",
+    check(
+      `{
       allParents(includeArchived: NO) {
         nodes {
           id
         }
       }
     }`,
-    { allParents: { nodes: [{ id: 1 }, { id: 3 }] } }
-  )
-);
+      { allParents: { nodes: [{ id: 1 }, { id: 3 }] } }
+    )
+  );
 
-test(
-  "Includes everything when YES",
-  check(
-    `{
+  test(
+    "Includes everything when YES",
+    check(
+      `{
       allParents(includeArchived: YES) {
         nodes {
           id
         }
       }
     }`,
-    { allParents: { nodes: [{ id: 1 }, { id: 2 }, { id: 3 }] } }
-  )
-);
+      { allParents: { nodes: [{ id: 1 }, { id: 2 }, { id: 3 }] } }
+    )
+  );
 
-test(
-  "Includes only archived when EXCLUSIVELY",
-  check(
-    `{
+  test(
+    "Includes only archived when EXCLUSIVELY",
+    check(
+      `{
       allParents(includeArchived: EXCLUSIVELY) {
         nodes {
           id
         }
       }
     }`,
-    { allParents: { nodes: [{ id: 2 }] } }
-  )
-);
+      { allParents: { nodes: [{ id: 2 }] } }
+    )
+  );
+});
