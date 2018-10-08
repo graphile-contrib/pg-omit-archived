@@ -20,16 +20,19 @@ const AddIncludeArchivedOptionEnumPlugin = makeExtendSchemaPlugin(() => ({
       Exclude archived items.
       """
       NO
+
       """
       Include archived items.
       """
       YES
+
       """
       Only include archived items (i.e. exclude non-archived items).
       """
       EXCLUSIVELY
+
       """
-      Only appropriate when used on a GraphQL relation. If the parent of the relation is archived then equivalent to YES, in all other cases equivalent to NO.
+      If there is a parent GraphQL record and it is archived then this is equivalent to YES, in all other cases this is equivalent to NO.
       """
       INHERIT
     }
@@ -96,27 +99,29 @@ const PgOmitArchivedInnerPlugin = (
         ? sql.fragment`false`
         : sql.fragment`null`;
 
+      const parentTableArchivedColumn = getArchivedColumn(parentTable);
+      const capableOfInherit =
+        isPgBackwardRelationField && !!parentTableArchivedColumn;
+      const pgParentArchivedColumnIsBoolean =
+        parentTableArchivedColumn &&
+        parentTableArchivedColumn.type.category === "B";
+      const parentNotArchivedFragment = pgParentArchivedColumnIsBoolean
+        ? sql.fragment`false`
+        : sql.fragment`null`;
+
       addArgDataGenerator(function connectionCondition({ includeArchived }) {
         return {
           pgQuery: queryBuilder => {
             if (
+              capableOfInherit &&
               includeArchived === "INHERIT" &&
-              isPgBackwardRelationField &&
-              queryBuilder.parentQueryBuilder &&
-              getArchivedColumn(parentTable)
+              queryBuilder.parentQueryBuilder
             ) {
-              const parentTableArchivedColumn = getArchivedColumn(parentTable);
-              const pgParentArchivedColumnIsBoolean =
-                parentTableArchivedColumn.type.category === "B";
-
-              const parentNotArchivedFragment = pgParentArchivedColumnIsBoolean
-                ? sql.fragment`false`
-                : sql.fragment`null`;
               const sqlParentTableAlias = queryBuilder.parentQueryBuilder.getTableAlias();
               queryBuilder.where(
                 sql.fragment`(${sqlParentTableAlias}.${sql.identifier(
                   parentTableArchivedColumn.name
-                )} IS NOT ${parentNotArchivedFragment} OR ${queryBuilder.getTableAlias()}.${sql.identifier(
+                )} is not ${parentNotArchivedFragment} or ${queryBuilder.getTableAlias()}.${sql.identifier(
                   archivedColumn.name
                 )} is ${notArchivedFragment})`
               );
@@ -148,7 +153,7 @@ const PgOmitArchivedInnerPlugin = (
             description:
               "Indicates whether archived items should be included in the results or not.",
             type: IncludeArchivedOption,
-            defaultValue: "INHERIT",
+            defaultValue: capableOfInherit ? "INHERIT" : "NO",
           },
         },
         `Adding includeArchived argument to connection field '${
