@@ -18,7 +18,7 @@
   "author": "Benjie Gillam <code@benjiegillam.com>",
   "license": "MIT",
   "dependencies": {
-    "graphile-utils": "^4.0.0"
+    "graphile-utils": "^4.0.1"
   },
   "devDependencies": {
     "graphql": "0.13.x",
