@@ -192,7 +192,7 @@ describe("children", () => {
 
 describe("children of parents", () => {
   test(
-    "Omits archived parents by default",
+    "Omits archived parents and children by default",
     check(
       `{
         allParents {
@@ -220,7 +220,7 @@ describe("children of parents", () => {
   );
 
   test(
-    "Omits archived parents when NO",
+    "Omits archived parents and children when NO",
     check(
       `{
         allParents(includeArchived: NO) {
@@ -248,7 +248,7 @@ describe("children of parents", () => {
   );
 
   test(
-    "Includes everything when YES",
+    "Includes all parents, and treats children as INHERIT (all children of an archived parent, but only the unarchived children of an unarchived parent) when YES",
     check(
       `{
         allParents(includeArchived: YES) {
@@ -280,7 +280,7 @@ describe("children of parents", () => {
   );
 
   test(
-    "Includes only archived when EXCLUSIVELY",
+    "Includes only archived parents (and all their children) when EXCLUSIVELY",
     check(
       `{
         allParents(includeArchived: EXCLUSIVELY) {
