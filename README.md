@@ -15,7 +15,18 @@ yarn add postgraphile @graphile-contrib/pg-omit-archived
 
 (Or replace `yarn add` with `npm install --save` if you use npm.)
 
-## Usage - CLI
+## Usage
+
+Add a boolean column `is_archived` to your table to indicate whether the record
+should be skipped over by default or not:
+
+```sql
+alter table my_table add column is_archived boolean not null default false;
+```
+
+Then append this plugin to your PostGraphile options.
+
+### Usage - CLI
 
 When using this via the CLI, the database column must be named `is_archived`.
 
@@ -23,7 +34,7 @@ When using this via the CLI, the database column must be named `is_archived`.
 postgraphile --append-plugins @graphile-contrib/pg-omit-archived -c postgres:///my_db
 ```
 
-## Usage - Library
+### Usage - Library
 
 You can modify the archived column name when using PostGraphile as a library, e.g.:
 
