@@ -22,7 +22,7 @@ create index on omit_archived.children(parent_id);
 insert into omit_archived.parents (id, name, is_archived) values (1, 'First', false), (2, 'Second', true);
 insert into omit_archived.children (id, parent_id, name, is_archived) values
   (1001, 1, 'First child 1', false), (1002, 1, 'First child 2', true),
-  (2001, 1, 'Second child 1', false), (2002, 1, 'Second child 2', true);
+  (2001, 2, 'Second child 1', false), (2002, 2, 'Second child 2', true);
 `;
 
 function iderize(...ids) {
