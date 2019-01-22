@@ -50,7 +50,7 @@ app.use(
     /* 👇👇👇 */
     appendPlugins: [PgOmitArchived],
     graphileBuildOptions: {
-      pgArchivedColumnName: "isArchived",
+      pgArchivedColumnName: "is_archived",
     },
     /* ☝️☝️☝️ */
   })
