@@ -22,7 +22,9 @@ const makeUtils = (build, keyword, table, parentTable, allowInherit) => {
     pgSql: sql,
     getTypeByName,
     pgIntrospectionResultsByKind: introspectionResultsByKind,
-    options: { [`pg${Keyword}ColumnName`]: columnNameToCheck = `is_${keyword}` }
+    options: {
+      [`pg${Keyword}ColumnName`]: columnNameToCheck = `is_${keyword}`,
+    },
   } = build;
   const OptionType = getTypeByName(`Include${Keyword}Option`);
 
@@ -30,7 +32,7 @@ const makeUtils = (build, keyword, table, parentTable, allowInherit) => {
     tableToCheck
       ? introspectionResultsByKind.attribute.find(
           attr =>
-            attr.classId === tableToCheck.id && attr.name === columnNameToCheck
+            attr.classId === tableToCheck.id && attr.name === columnNameToCheck,
         )
       : null;
   const relevantColumn = getRelevantColumn(table);
@@ -47,13 +49,13 @@ const makeUtils = (build, keyword, table, parentTable, allowInherit) => {
 
   const columnDetails = {
     isBoolean: pgRelevantColumnIsBoolean,
-    name: relevantColumn.name
+    name: relevantColumn.name,
   };
   const parentColumnDetails = parentTableRelevantColumn
     ? {
         isBoolean: pgParentRelevantColumnIsBoolean,
         canInherit: capableOfInherit,
-        name: parentTableRelevantColumn.name
+        name: parentTableRelevantColumn.name,
       }
     : null;
 
@@ -75,10 +77,10 @@ const makeUtils = (build, keyword, table, parentTable, allowInherit) => {
       const sqlParentTableAlias = queryBuilder.parentQueryBuilder.getTableAlias();
       queryBuilder.where(
         sql.fragment`(${sqlParentTableAlias}.${sql.identifier(
-          parentColumnDetails.name
+          parentColumnDetails.name,
         )} is not ${parentVisibleFragment} or ${queryBuilder.getTableAlias()}.${sql.identifier(
-          columnDetails.name
-        )} is ${visibleFragment})`
+          columnDetails.name,
+        )} is ${visibleFragment})`,
       );
     } else if (
       relevantSetting === "NO" ||
@@ -87,21 +89,21 @@ const makeUtils = (build, keyword, table, parentTable, allowInherit) => {
     ) {
       queryBuilder.where(
         sql.fragment`${queryBuilder.getTableAlias()}.${sql.identifier(
-          columnDetails.name
-        )} is ${visibleFragment}`
+          columnDetails.name,
+        )} is ${visibleFragment}`,
       );
     } else if (relevantSetting === "EXCLUSIVELY") {
       queryBuilder.where(
         sql.fragment`${queryBuilder.getTableAlias()}.${sql.identifier(
-          columnDetails.name
-        )} is not ${visibleFragment}`
+          columnDetails.name,
+        )} is not ${visibleFragment}`,
       );
     }
   }
   return {
     OptionType,
     addWhereClause,
-    capableOfInherit
+    capableOfInherit,
   };
 };
 
@@ -155,7 +157,7 @@ const generator = (keyword = "archived") => {
     /* Had to move this to the build phase so that other plugins can use it */
     builder.hook("build", build => {
       const {
-        graphql: { GraphQLEnumType }
+        graphql: { GraphQLEnumType },
       } = build;
       build.newWithHooks(
         GraphQLEnumType,
@@ -165,25 +167,25 @@ const generator = (keyword = "archived") => {
           values: {
             NO: {
               value: "NO",
-              description: `Exclude ${keyword} items.`
+              description: `Exclude ${keyword} items.`,
             },
             YES: {
               description: `Include ${keyword} items.`,
-              value: "YES"
+              value: "YES",
             },
             EXCLUSIVELY: {
               description: `Only include ${keyword} items (i.e. exclude non-${keyword} items).`,
-              value: "EXCLUSIVELY"
+              value: "EXCLUSIVELY",
             },
             INHERIT: {
               description: `If there is a parent GraphQL record and it is ${keyword} then this is equivalent to YES, in all other cases this is equivalent to NO.`,
-              value: "INHERIT"
-            }
-          }
+              value: "INHERIT",
+            },
+          },
         },
         {
-          [`isInclude${Keyword}OptionEnum`]: true
-        }
+          [`isInclude${Keyword}OptionEnum`]: true,
+        },
       );
       return build;
     });
@@ -200,11 +202,11 @@ const generator = (keyword = "archived") => {
             isPgBackwardRelationField,
             pgFieldIntrospection: table,
             pgIntrospection: parentTable,
-            includeArchived
+            includeArchived,
           },
           addArgDataGenerator,
           Self,
-          field
+          field,
         } = context;
         if (
           !isPgFieldConnection ||
@@ -222,7 +224,7 @@ const generator = (keyword = "archived") => {
           keyword,
           table,
           parentTable,
-          allowInherit
+          allowInherit,
         );
         if (!utils) {
           return args;
@@ -232,7 +234,7 @@ const generator = (keyword = "archived") => {
           return {
             pgQuery: queryBuilder => {
               addWhereClause(queryBuilder, fieldArgs);
-            }
+            },
           };
         });
 
@@ -242,18 +244,18 @@ const generator = (keyword = "archived") => {
             [`include${Keyword}`]: {
               description: `Indicates whether ${keyword} items should be included in the results or not.`,
               type: OptionType,
-              defaultValue: capableOfInherit ? "INHERIT" : "NO"
-            }
+              defaultValue: capableOfInherit ? "INHERIT" : "NO",
+            },
           },
-          `Adding include${Keyword} argument to connection field '${field.name}' of '${Self.name}'`
+          `Adding include${Keyword} argument to connection field '${field.name}' of '${Self.name}'`,
         );
-      }
+      },
     );
   };
 
   const Plugin = makePluginByCombiningPlugins(
     AddToEnumPlugin,
-    PgOmitInnerPlugin
+    PgOmitInnerPlugin,
   );
   Plugin.displayName = `PgOmit${Keyword}Plugin`;
   return Plugin;

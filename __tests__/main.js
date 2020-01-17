@@ -62,11 +62,11 @@ function check(query, expected) {
           rootValue,
           context,
           variables,
-          operationName
+          operationName,
         );
         expect(result.errors).toBeFalsy();
         expect(result.data).toEqual(expected);
-      }
+      },
     );
 }
 
@@ -81,8 +81,8 @@ describe("parents", () => {
         }
       }
     }`,
-      { allParents: { nodes: iderize(1) } }
-    )
+      { allParents: { nodes: iderize(1) } },
+    ),
   );
 
   test(
@@ -95,8 +95,8 @@ describe("parents", () => {
         }
       }
     }`,
-      { allParents: { nodes: iderize(1) } }
-    )
+      { allParents: { nodes: iderize(1) } },
+    ),
   );
 
   test(
@@ -109,8 +109,8 @@ describe("parents", () => {
         }
       }
     }`,
-      { allParents: { nodes: iderize(1, 2) } }
-    )
+      { allParents: { nodes: iderize(1, 2) } },
+    ),
   );
 
   test(
@@ -123,8 +123,8 @@ describe("parents", () => {
         }
       }
     }`,
-      { allParents: { nodes: iderize(2) } }
-    )
+      { allParents: { nodes: iderize(2) } },
+    ),
   );
 });
 
@@ -139,8 +139,8 @@ describe("children", () => {
         }
       }
     }`,
-      { allChildren: { nodes: iderize(1001, 2001) } }
-    )
+      { allChildren: { nodes: iderize(1001, 2001) } },
+    ),
   );
 
   test(
@@ -153,8 +153,8 @@ describe("children", () => {
         }
       }
     }`,
-      { allChildren: { nodes: iderize(1001, 2001) } }
-    )
+      { allChildren: { nodes: iderize(1001, 2001) } },
+    ),
   );
 
   test(
@@ -171,8 +171,8 @@ describe("children", () => {
         allChildren: {
           nodes: iderize(1001, 1002, 2001, 2002),
         },
-      }
-    )
+      },
+    ),
   );
 
   test(
@@ -185,8 +185,8 @@ describe("children", () => {
         }
       }
     }`,
-      { allChildren: { nodes: iderize(1002, 2002) } }
-    )
+      { allChildren: { nodes: iderize(1002, 2002) } },
+    ),
   );
 });
 
@@ -215,8 +215,8 @@ describe("children of parents", () => {
             },
           ],
         },
-      }
-    )
+      },
+    ),
   );
 
   test(
@@ -243,8 +243,8 @@ describe("children of parents", () => {
             },
           ],
         },
-      }
-    )
+      },
+    ),
   );
 
   test(
@@ -275,8 +275,8 @@ describe("children of parents", () => {
             },
           ],
         },
-      }
-    )
+      },
+    ),
   );
 
   test(
@@ -303,7 +303,7 @@ describe("children of parents", () => {
             },
           ],
         },
-      }
-    )
+      },
+    ),
   );
 });
