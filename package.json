@@ -18,15 +18,22 @@
   "author": "Benjie Gillam <code@benjiegillam.com>",
   "license": "MIT",
   "dependencies": {
-    "graphile-utils": "^4.0.1"
+    "graphile-utils": "^4.5.6"
+  },
+  "peerDependencies": {
+    "postgraphile": "^4.5.5"
   },
   "devDependencies": {
-    "graphql": "0.13.x",
+    "graphql": "14.x",
     "jest": "^23.6.0",
     "pg": "^7.5.0",
-    "postgraphile": "^4.0.0"
+    "postgraphile": "^4.5.5"
   },
   "files": [
     "index.js"
-  ]
+  ],
+  "prettier": {
+    "trailingComma": "all",
+    "proseWrap": "always"
+  }
 }
