@@ -199,6 +199,7 @@ const generator = (keyword = "archived") => {
         const {
           scope: {
             isPgFieldConnection,
+            isPgFieldSimpleCollection,
             isPgBackwardRelationField,
             pgFieldIntrospection: table,
             pgIntrospection: parentTable,
@@ -209,7 +210,7 @@ const generator = (keyword = "archived") => {
           field,
         } = context;
         if (
-          !isPgFieldConnection ||
+          !(isPgFieldConnection || isPgFieldSimpleCollection) ||
           !table ||
           table.kind !== "class" ||
           !table.namespace ||

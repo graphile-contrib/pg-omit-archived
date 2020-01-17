@@ -310,3 +310,201 @@ describe("connections", () => {
     );
   });
 });
+
+describe("simple collections", () => {
+  describe("parents", () => {
+    test(
+      "Omits archived parents by default",
+      check(
+        `{
+          allParentsList {
+            id
+          }
+        }`,
+        { allParentsList: iderize(1) },
+      ),
+    );
+
+    test(
+      "Omits archived parents when NO",
+      check(
+        `{
+          allParentsList(includeArchived: NO) {
+            id
+          }
+        }`,
+        { allParentsList: iderize(1) },
+      ),
+    );
+
+    test(
+      "Includes everything when YES",
+      check(
+        `{
+          allParentsList(includeArchived: YES) {
+            id
+          }
+        }`,
+        { allParentsList: iderize(1, 2) },
+      ),
+    );
+
+    test(
+      "Includes only archived when EXCLUSIVELY",
+      check(
+        `{
+          allParentsList(includeArchived: EXCLUSIVELY) {
+            id
+          }
+        }`,
+        { allParentsList: iderize(2) },
+      ),
+    );
+  });
+
+  describe("children", () => {
+    test(
+      "Omits archived children by default",
+      check(
+        `{
+          allChildrenList {
+            id
+          }
+        }`,
+        { allChildrenList: iderize(1001, 2001) },
+      ),
+    );
+
+    test(
+      "Omits archived children when NO",
+      check(
+        `{
+          allChildrenList(includeArchived: NO) {
+            id
+          }
+        }`,
+        { allChildrenList: iderize(1001, 2001) },
+      ),
+    );
+
+    test(
+      "Includes everything when YES",
+      check(
+        `{
+          allChildrenList(includeArchived: YES) {
+            id
+          }
+        }`,
+        {
+          allChildrenList: iderize(1001, 1002, 2001, 2002),
+        },
+      ),
+    );
+
+    test(
+      "Includes only archived when EXCLUSIVELY",
+      check(
+        `{
+          allChildrenList(includeArchived: EXCLUSIVELY) {
+            id
+          }
+        }`,
+        { allChildrenList: iderize(1002, 2002) },
+      ),
+    );
+  });
+
+  describe("children of parents", () => {
+    test(
+      "Omits archived parents and children by default",
+      check(
+        `{
+          allParentsList {
+            id
+            childrenByParentIdList {
+              id
+            }
+          }
+        }`,
+        {
+          allParentsList: [
+            {
+              id: 1,
+              childrenByParentIdList: iderize(1001),
+            },
+          ],
+        },
+      ),
+    );
+
+    test(
+      "Omits archived parents and children when NO",
+      check(
+        `{
+          allParentsList(includeArchived: NO) {
+            id
+            childrenByParentIdList {
+              id
+            }
+          }
+        }`,
+        {
+          allParentsList: [
+            {
+              id: 1,
+              childrenByParentIdList: iderize(1001),
+            },
+          ],
+        },
+      ),
+    );
+
+    test(
+      "Includes all parents, and treats children as INHERIT (all children of an archived parent, but only the unarchived children of an unarchived parent) when YES",
+      check(
+        `{
+          allParentsList(includeArchived: YES) {
+            id
+            childrenByParentIdList {
+              id
+            }
+          }
+        }`,
+        {
+          allParentsList: [
+            {
+              id: 1,
+              childrenByParentIdList: iderize(1001),
+            },
+            {
+              id: 2,
+              childrenByParentIdList: iderize(2001, 2002),
+            },
+          ],
+        },
+      ),
+    );
+
+    test(
+      "Includes only archived parents (and all their children) when EXCLUSIVELY",
+      check(
+        `{
+          allParentsList(includeArchived: EXCLUSIVELY) {
+            id
+            childrenByParentIdList {
+              id
+            }
+          }
+        }`,
+        {
+          allParentsList: [
+            {
+              id: 2,
+              childrenByParentIdList: iderize(2001, 2002),
+            },
+          ],
+        },
+      ),
+    );
+  });
+});
