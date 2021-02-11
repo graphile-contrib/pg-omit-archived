@@ -32,7 +32,7 @@ function iderize(...ids) {
 let pgPool;
 let schema;
 const options = {
-  appendPlugins: [require("..")],
+  appendPlugins: [require("..").default],
   simpleCollections: "both",
 };
 beforeAll(() => {

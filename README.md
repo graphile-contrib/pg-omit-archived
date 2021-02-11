@@ -46,7 +46,9 @@ e.g.:
 ```js
 const express = require("express");
 const { postgraphile } = require("postgraphile");
-const PgOmitArchived = require("@graphile-contrib/pg-omit-archived");
+const {
+  default: PgOmitArchived,
+} = require("@graphile-contrib/pg-omit-archived");
 
 const app = express();
 
@@ -69,7 +71,9 @@ You can also use the plugin multiple times for different columns, for example:
 ```js
 const express = require("express");
 const { postgraphile } = require("postgraphile");
-const PgOmitArchived = require("@graphile-contrib/pg-omit-archived");
+const {
+  custom: customPgOmitArchived,
+} = require("@graphile-contrib/pg-omit-archived");
 
 const app = express();
 
@@ -77,9 +81,9 @@ app.use(
   postgraphile(process.env.DATABASE_URL, "app_public", {
     /* 👇👇👇 */
     appendPlugins: [
-      PgOmitArchived.custom("archived"),
-      PgOmitArchived.custom("deleted"),
-      PgOmitArchived.custom("template"),
+      customPgOmitArchived("archived"),
+      customPgOmitArchived("deleted"),
+      customPgOmitArchived("template"),
     ],
     graphileBuildOptions: {
       pgArchivedColumnName: "is_archived", // boolean column -> checked as "IS NOT TRUE"
