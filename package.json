@@ -36,9 +36,7 @@
     "prettier": "^2.2.1",
     "typescript": "^4.1.5"
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["src", "dist"],
   "prettier": {
     "trailingComma": "all",
     "proseWrap": "always"
