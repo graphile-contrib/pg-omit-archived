@@ -1,34 +1,41 @@
-// @ts-check
 /**
  * This plugin was sponsored by Sprout LLC. 🙏
  *
  * https://sprout.io
  */
 
-const { makePluginByCombiningPlugins } = require("graphile-utils");
+import { makePluginByCombiningPlugins } from "graphile-utils";
+import type { Build, Plugin } from "postgraphile";
+import type { PgClass, PgIntrospectionResultsByKind, QueryBuilder } from "graphile-build-pg";
 
 /**
  * Build utils
  *
- * @param {Build} build - Graphile Build object
- * @param {string} keyword - 'archived' or 'deleted' or similar
- * @param {PgClass} table - The table we're building a query against
- * @param {PgClass | null | void} parentTable - The table of the `parentQueryBuilder`, if any
- * @param {boolean | null | void} allowInherit - Should we allow inheritance if it seems possible?
+ * @param build - Graphile Build object
+ * @param keyword - 'archived' or 'deleted' or similar
+ * @param table - The table we're building a query against
+ * @param parentTable - The table of the `parentQueryBuilder`, if any
+ * @param allowInherit - Should we allow inheritance if it seems possible?
  */
-const makeUtils = (build, keyword, table, parentTable, allowInherit) => {
+const makeUtils = (
+  build: Build,
+  keyword: string,
+  table: PgClass,
+  parentTable: PgClass,
+  allowInherit?: boolean,
+) => {
   const Keyword = keyword[0].toUpperCase() + keyword.slice(1);
   const {
-    pgSql: sql,
     getTypeByName,
-    pgIntrospectionResultsByKind: introspectionResultsByKind,
     options: {
       [`pg${Keyword}ColumnName`]: columnNameToCheck = `is_${keyword}`,
     },
   } = build;
+  const sql = build.pgSql as typeof import('pg-sql2');
+  const introspectionResultsByKind = build.pgIntrospectionResultsByKind as PgIntrospectionResultsByKind
   const OptionType = getTypeByName(`Include${Keyword}Option`);
 
-  const getRelevantColumn = tableToCheck =>
+  const getRelevantColumn = (tableToCheck: PgClass) =>
     tableToCheck
       ? introspectionResultsByKind.attribute.find(
           attr =>
@@ -67,12 +74,12 @@ const makeUtils = (build, keyword, table, parentTable, allowInherit) => {
     parentColumnDetails && parentColumnDetails.isBoolean
       ? sql.fragment`false`
       : sql.fragment`null`;
-  function addWhereClause(queryBuilder, fieldArgs) {
+  function addWhereClause(queryBuilder: QueryBuilder, fieldArgs: any) {
     const { [`include${Keyword}`]: relevantSetting } = fieldArgs;
     if (
       capableOfInherit &&
       relevantSetting === "INHERIT" &&
-      queryBuilder.parentQueryBuilder
+      queryBuilder.parentQueryBuilder && parentColumnDetails
     ) {
       const sqlParentTableAlias = queryBuilder.parentQueryBuilder.getTableAlias();
       queryBuilder.where(
@@ -153,7 +160,7 @@ const generator = (keyword = "archived") => {
     },
   }));
   */
-  const AddToEnumPlugin = builder => {
+  const AddToEnumPlugin: Plugin = builder => {
     /* Had to move this to the build phase so that other plugins can use it */
     builder.hook("build", build => {
       const {
@@ -191,7 +198,7 @@ const generator = (keyword = "archived") => {
     });
   };
 
-  const PgOmitInnerPlugin = builder => {
+  const PgOmitInnerPlugin: Plugin = builder => {
     builder.hook(
       "GraphQLObjectType:fields:field:args",
       (args, build, context) => {
@@ -231,9 +238,9 @@ const generator = (keyword = "archived") => {
           return args;
         }
         const { addWhereClause, OptionType, capableOfInherit } = utils;
-        addArgDataGenerator(function connectionCondition(fieldArgs) {
+        addArgDataGenerator(function connectionCondition(fieldArgs: any) {
           return {
-            pgQuery: queryBuilder => {
+            pgQuery: (queryBuilder: QueryBuilder) => {
               addWhereClause(queryBuilder, fieldArgs);
             },
           };
@@ -263,6 +270,5 @@ const generator = (keyword = "archived") => {
 };
 
 const Plugin = generator();
-module.exports = Plugin;
-module.exports.custom = generator;
-module.exports.makeUtils = makeUtils;
+export default Plugin;
+export { generator as custom, makeUtils }
