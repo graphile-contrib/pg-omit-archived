@@ -5,7 +5,7 @@
  */
 
 import { makePluginByCombiningPlugins } from "graphile-utils";
-import type { Build, Plugin } from "postgraphile";
+import type { Build, Plugin as GraphileEnginePlugin } from "postgraphile";
 import type { PgClass, PgIntrospectionResultsByKind, QueryBuilder } from "graphile-build-pg";
 
 /**
@@ -119,7 +119,7 @@ const makeUtils = (
  * 'eradicated', though 'scheduledForDeletion' is probably okay, as is
  * 'template' - have a read through where it's used and judge for yourself
  */
-const generator = (keyword = "archived") => {
+const generator = (keyword = "archived"): GraphileEnginePlugin => {
   const Keyword = keyword[0].toUpperCase() + keyword.slice(1);
 
   /*
@@ -160,7 +160,7 @@ const generator = (keyword = "archived") => {
     },
   }));
   */
-  const AddToEnumPlugin: Plugin = builder => {
+  const AddToEnumPlugin: GraphileEnginePlugin = builder => {
     /* Had to move this to the build phase so that other plugins can use it */
     builder.hook("build", build => {
       const {
@@ -198,7 +198,7 @@ const generator = (keyword = "archived") => {
     });
   };
 
-  const PgOmitInnerPlugin: Plugin = builder => {
+  const PgOmitInnerPlugin: GraphileEnginePlugin = builder => {
     builder.hook(
       "GraphQLObjectType:fields:field:args",
       (args, build, context) => {
@@ -269,8 +269,8 @@ const generator = (keyword = "archived") => {
   return Plugin;
 };
 
-const Plugin = generator();
-Plugin.custom = generator;
-Plugin.makeUtils = makeUtils;
+const Plugin = Object.assign(generator(), {
+  custom: generator,
+makeUtils});
 export default Plugin;
 export { generator as custom, makeUtils }
