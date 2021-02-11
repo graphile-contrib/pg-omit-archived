@@ -270,5 +270,7 @@ const generator = (keyword = "archived") => {
 };
 
 const Plugin = generator();
+Plugin.custom = generator;
+Plugin.makeUtils = makeUtils;
 export default Plugin;
 export { generator as custom, makeUtils }
