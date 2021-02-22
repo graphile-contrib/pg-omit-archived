@@ -4,10 +4,12 @@ This Graphile Engine plugin can be used to give your schema support for
 "soft-deletes" - where you set an `is_archived` or `is_deleted` column to true
 and expect the record to be omitted by default (but it's still available to be
 recovered should you need to). It's also useful for hiding certain other classes
-of records by default, but allowing them to be shown by passing a parameter.
+of records by default, but allowing them to be shown by passing a parameter; for
+example you could hide drafts via a `published_at` column and require an
+explicit `includeDrafts: YES` setting to show them.
 
-It's possible to use this plugin multiple times (for different column
-names/meanings).
+It's possible (and common) to use this plugin multiple times (for different
+column names/meanings).
 
 ## Installing
 
@@ -58,6 +60,7 @@ app.use(
     appendPlugins: [PgOmitArchived],
     graphileBuildOptions: {
       pgArchivedColumnName: "is_archived",
+      pgArchivedColumnImpliesVisible: false,
     },
     /* ☝️☝️☝️ */
   }),
@@ -84,11 +87,22 @@ app.use(
       customPgOmitArchived("archived"),
       customPgOmitArchived("deleted"),
       customPgOmitArchived("template"),
+      customPgOmitArchived("draft"), // e.g. draft vs published
     ],
     graphileBuildOptions: {
+      // Options for 'archived':
       pgArchivedColumnName: "is_archived", // boolean column -> checked as "IS NOT TRUE"
+      pgArchivedColumnImpliesVisible: false, // when true, hide; when false, visible
+
+      // Options for 'deleted':
       pgDeletedColumnName: "deleted_at", // non-boolean column -> checked as "IS NULL"
+
+      // Options for 'template':
       pgTemplateColumnName: "is_template",
+
+      // Options for 'draft':
+      pgDraftColumnName: "is_published", // Column name doesn't have to match keyword name
+      pgDraftColumnImpliesVisible: true, // When true -> published -> visible; when false -> unpublished -> hiddel
     },
     /* ☝️☝️☝️ */
   }),
@@ -96,6 +110,23 @@ app.use(
 
 app.listen(process.env.PORT || 3000);
 ```
+
+### Usage - advanced options
+
+By default we'll look for a column named after your keyword (e.g. if you use the
+'deleted' keyword, we'll look for an `is_deleted` column). You may override the
+column adding the `pg<Keyword>ColumnName: 'my_column_name_here'` setting to
+`graphileBuildOptions`, where `<Keyword>` is your keyword with the first
+character uppercased (see above for examples).
+
+This plugin was built expecting to hide things when `true` (boolean) or non-null
+(e.g. nullable timestamp) - this works well for things like `is_archived`,
+`deleted_at`, and `is_template`. However sometimes you want this inverse of this
+behaviour; e.g. if your column is `published_at` you'd want it visible when
+non-null and hidden when null. To invert the behaviour, add the
+`pg<Keyword>ColumnImpliesVisible: true` setting to `graphileBuildOptions`, where
+`<Keyword>` is your keyword with the first character uppercased (see above for
+examples).
 
 ## Behaviour
 
