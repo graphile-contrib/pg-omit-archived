@@ -6,7 +6,11 @@
 
 import { makePluginByCombiningPlugins } from "graphile-utils";
 import type { Build, Plugin as GraphileEnginePlugin } from "postgraphile";
-import type { PgClass, PgIntrospectionResultsByKind, QueryBuilder } from "graphile-build-pg";
+import type {
+  PgClass,
+  PgIntrospectionResultsByKind,
+  QueryBuilder,
+} from "graphile-build-pg";
 
 /**
  * Build utils
@@ -29,16 +33,19 @@ const makeUtils = (
     getTypeByName,
     options: {
       [`pg${Keyword}ColumnName`]: columnNameToCheck = `is_${keyword}`,
+      // If true inverts the omitting logic (e.g. true for `is_published` or
+      // `published_at`; false for `is_archived` or `archived_at`).
+      [`pg${Keyword}ColumnImpliesVisible`]: invert = false,
     },
   } = build;
-  const sql = build.pgSql as typeof import('pg-sql2');
-  const introspectionResultsByKind = build.pgIntrospectionResultsByKind as PgIntrospectionResultsByKind
+  const sql = build.pgSql as typeof import("pg-sql2");
+  const introspectionResultsByKind = build.pgIntrospectionResultsByKind as PgIntrospectionResultsByKind;
   const OptionType = getTypeByName(`Include${Keyword}Option`);
 
   const getRelevantColumn = (tableToCheck: PgClass) =>
     tableToCheck
       ? introspectionResultsByKind.attribute.find(
-          attr =>
+          (attr) =>
             attr.classId === tableToCheck.id && attr.name === columnNameToCheck,
         )
       : null;
@@ -66,26 +73,44 @@ const makeUtils = (
       }
     : null;
 
-  const visibleFragment = columnDetails.isBoolean
-    ? sql.fragment`false`
+  const booleanVisibleFragment = invert
+    ? sql.fragment`true`
+    : sql.fragment`false`;
+
+  const booleanInvisibleFragment = invert
+    ? sql.fragment`not true`
+    : sql.fragment`not false`; // Keep in mind booleans are trinary in Postgres: true, false, null
+
+  const nullableVisibleFragment = invert
+    ? sql.fragment`not null`
     : sql.fragment`null`;
 
-  const parentVisibleFragment =
+  const nullableInvisibleFragment = invert
+    ? sql.fragment`null`
+    : sql.fragment`not null`;
+
+  const [visibleFragment, invisibleFragment] = columnDetails.isBoolean
+    ? [booleanVisibleFragment, booleanInvisibleFragment]
+    : [nullableVisibleFragment, nullableInvisibleFragment];
+
+  const [_parentVisibleFragment, parentInvisibleFragment] =
     parentColumnDetails && parentColumnDetails.isBoolean
-      ? sql.fragment`false`
-      : sql.fragment`null`;
+      ? [booleanVisibleFragment, booleanInvisibleFragment]
+      : [nullableVisibleFragment, nullableInvisibleFragment];
+
   function addWhereClause(queryBuilder: QueryBuilder, fieldArgs: any) {
     const { [`include${Keyword}`]: relevantSetting } = fieldArgs;
     if (
       capableOfInherit &&
       relevantSetting === "INHERIT" &&
-      queryBuilder.parentQueryBuilder && parentColumnDetails
+      queryBuilder.parentQueryBuilder &&
+      parentColumnDetails
     ) {
       const sqlParentTableAlias = queryBuilder.parentQueryBuilder.getTableAlias();
       queryBuilder.where(
         sql.fragment`(${sqlParentTableAlias}.${sql.identifier(
           parentColumnDetails.name,
-        )} is not ${parentVisibleFragment} or ${queryBuilder.getTableAlias()}.${sql.identifier(
+        )} is ${parentInvisibleFragment} or ${queryBuilder.getTableAlias()}.${sql.identifier(
           columnDetails.name,
         )} is ${visibleFragment})`,
       );
@@ -103,7 +128,7 @@ const makeUtils = (
       queryBuilder.where(
         sql.fragment`${queryBuilder.getTableAlias()}.${sql.identifier(
           columnDetails.name,
-        )} is not ${visibleFragment}`,
+        )} is ${invisibleFragment}`,
       );
     }
   }
@@ -116,8 +141,9 @@ const makeUtils = (
 
 /*
  * keyword should probably end in 'ed', e.g. 'archived', 'deleted',
- * 'eradicated', though 'scheduledForDeletion' is probably okay, as is
- * 'template' - have a read through where it's used and judge for yourself
+ * 'eradicated', 'unpublished', though 'scheduledForDeletion' is probably okay,
+ * as is 'template' or 'draft' - have a read through where it's used and judge
+ * for yourself
  */
 const generator = (keyword = "archived"): GraphileEnginePlugin => {
   const Keyword = keyword[0].toUpperCase() + keyword.slice(1);
@@ -160,9 +186,9 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
     },
   }));
   */
-  const AddToEnumPlugin: GraphileEnginePlugin = builder => {
+  const AddToEnumPlugin: GraphileEnginePlugin = (builder) => {
     /* Had to move this to the build phase so that other plugins can use it */
-    builder.hook("build", build => {
+    builder.hook("build", (build) => {
       const {
         graphql: { GraphQLEnumType },
       } = build;
@@ -198,7 +224,7 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
     });
   };
 
-  const PgOmitInnerPlugin: GraphileEnginePlugin = builder => {
+  const PgOmitInnerPlugin: GraphileEnginePlugin = (builder) => {
     builder.hook(
       "GraphQLObjectType:fields:field:args",
       (args, build, context) => {
@@ -210,7 +236,7 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
             isPgBackwardRelationField,
             pgFieldIntrospection: table,
             pgIntrospection: parentTable,
-            includeArchived,
+            [`include${Keyword}`]: includeArchived,
           },
           addArgDataGenerator,
           Self,
@@ -221,7 +247,7 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
           !table ||
           table.kind !== "class" ||
           !table.namespace ||
-          !!args[`include${keyword}`] ||
+          !!args[`include${Keyword}`] ||
           includeArchived
         ) {
           return args;
@@ -271,6 +297,7 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
 
 const Plugin = Object.assign(generator(), {
   custom: generator,
-makeUtils});
+  makeUtils,
+});
 export default Plugin;
-export { generator as custom, makeUtils }
+export { generator as custom, makeUtils };
