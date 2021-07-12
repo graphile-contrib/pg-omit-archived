@@ -38,6 +38,11 @@ create table omit_archived.children (
   published_at timestamptz default now()
 );
 create index on omit_archived.children(parent_id);
+create table omit_archived.other_children (
+  id int primary key,
+  parent_id int not null references omit_archived.parents,
+  title text
+);
 insert into omit_archived.parents (id, name, is_archived, archived_at, is_published, published_at)
   values (1, 'First', false, null, true, now()), (2, 'Second', true, now(), false, null);
 insert into omit_archived.children (id, parent_id, name, is_archived, archived_at, is_published, published_at) values
@@ -45,6 +50,11 @@ insert into omit_archived.children (id, parent_id, name, is_archived, archived_a
   (1002, 1, 'First child 2', true, now(), false, null),
   (2001, 2, 'Second child 1', false, null, true, now()),
   (2002, 2, 'Second child 2', true, now(), false, null);
+insert into omit_archived.other_children (id, parent_id, title) values
+  (101, 1, 'First other child 1'),
+  (102, 1, 'First other child 2'),
+  (201, 2, 'Second other child 1'),
+  (202, 2, 'Second other child 2');
 `;
 
 function iderize(...ids) {
@@ -62,14 +72,23 @@ afterAll(() => pgPool.end());
 
 describe.each([
   ["default"],
-  ["is_archived", "archived", { pgArchivedColumnName: "is_archived" }],
-  ["archived_at", "archived", { pgArchivedColumnName: "archived_at" }],
+  [
+    "is_archived",
+    "archived",
+    { pgArchivedColumnName: "is_archived", pgArchivedRelations: true },
+  ],
+  [
+    "archived_at",
+    "archived",
+    { pgArchivedColumnName: "archived_at", pgArchivedRelations: true },
+  ],
   [
     "is_published",
     "draft",
     {
       pgDraftColumnName: "is_published",
       pgDraftColumnImpliesVisible: true,
+      pgArchivedRelations: true,
     },
   ],
   [
@@ -78,6 +97,7 @@ describe.each([
     {
       pgDraftColumnName: "published_at",
       pgDraftColumnImpliesVisible: true,
+      pgArchivedRelations: true,
     },
   ],
 ])("%s", (_columnName, keyword, graphileBuildOptions) => {
@@ -558,4 +578,19 @@ describe.each([
       );
     });
   });
+
+  if (graphileBuildOptions && graphileBuildOptions.pgArchivedRelations) {
+    describe("pgArchivedRelations", () => {
+      it.todo("Defaults to omitting other_children where parent is archived");
+      it.todo("Includes only other_children of non-archived parents when NO");
+      it.todo("Includes all other_children of all parents when YES");
+      it.todo(
+        "Includes only other_children of archived parents when EXCLUSIVELY",
+      );
+    });
+  } else {
+    describe("pgArchivedRelations DISABLED", () => {
+      it.todo("Does not contain the omit archived fields on OtherChildren");
+    });
+  }
 });
