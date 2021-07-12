@@ -88,7 +88,7 @@ describe.each([
     {
       pgDraftColumnName: "is_published",
       pgDraftColumnImpliesVisible: true,
-      pgArchivedRelations: true,
+      pgDraftRelations: true,
     },
   ],
   [
@@ -97,7 +97,7 @@ describe.each([
     {
       pgDraftColumnName: "published_at",
       pgDraftColumnImpliesVisible: true,
-      pgArchivedRelations: true,
+      pgDraftRelations: true,
     },
   ],
 ])("%s", (_columnName, keyword, graphileBuildOptions) => {
@@ -581,7 +581,21 @@ describe.each([
 
   if (graphileBuildOptions && graphileBuildOptions.pgArchivedRelations) {
     describe("pgArchivedRelations", () => {
-      it.todo("Defaults to omitting other_children where parent is archived");
+      it(
+        "Defaults to omitting other_children where parent is archived",
+        check(
+          /* GraphQL */ `
+            {
+              allOtherChildrenList {
+                id
+              }
+            }
+          `,
+          {
+            allOtherChildrenList: iderize(101, 102),
+          },
+        ),
+      );
       it.todo("Includes only other_children of non-archived parents when NO");
       it.todo("Includes all other_children of all parents when YES");
       it.todo(
