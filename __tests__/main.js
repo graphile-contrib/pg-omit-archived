@@ -38,6 +38,11 @@ create table omit_archived.children (
   published_at timestamptz default now()
 );
 create index on omit_archived.children(parent_id);
+create table omit_archived.other_children (
+  id int primary key,
+  parent_id int not null references omit_archived.parents,
+  title text
+);
 insert into omit_archived.parents (id, name, is_archived, archived_at, is_published, published_at)
   values (1, 'First', false, null, true, now()), (2, 'Second', true, now(), false, null);
 insert into omit_archived.children (id, parent_id, name, is_archived, archived_at, is_published, published_at) values
@@ -45,6 +50,11 @@ insert into omit_archived.children (id, parent_id, name, is_archived, archived_a
   (1002, 1, 'First child 2', true, now(), false, null),
   (2001, 2, 'Second child 1', false, null, true, now()),
   (2002, 2, 'Second child 2', true, now(), false, null);
+insert into omit_archived.other_children (id, parent_id, title) values
+  (101, 1, 'First other child 1'),
+  (102, 1, 'First other child 2'),
+  (201, 2, 'Second other child 1'),
+  (202, 2, 'Second other child 2');
 `;
 
 function iderize(...ids) {
@@ -62,14 +72,23 @@ afterAll(() => pgPool.end());
 
 describe.each([
   ["default"],
-  ["is_archived", "archived", { pgArchivedColumnName: "is_archived" }],
-  ["archived_at", "archived", { pgArchivedColumnName: "archived_at" }],
+  [
+    "is_archived",
+    "archived",
+    { pgArchivedColumnName: "is_archived", pgArchivedRelations: true },
+  ],
+  [
+    "archived_at",
+    "archived",
+    { pgArchivedColumnName: "archived_at", pgArchivedRelations: true },
+  ],
   [
     "is_published",
     "draft",
     {
       pgDraftColumnName: "is_published",
       pgDraftColumnImpliesVisible: true,
+      pgDraftRelations: true,
     },
   ],
   [
@@ -78,6 +97,7 @@ describe.each([
     {
       pgDraftColumnName: "published_at",
       pgDraftColumnImpliesVisible: true,
+      pgDraftRelations: true,
     },
   ],
 ])("%s", (_columnName, keyword, graphileBuildOptions) => {
@@ -96,7 +116,7 @@ describe.each([
     schema = await createPostGraphileSchema(pgPool, ["omit_archived"], options);
   });
 
-  function check(query, expected) {
+  function check(query, expected, checker) {
     const rootValue = null;
     const variables = {};
     const operationName = null;
@@ -115,7 +135,11 @@ describe.each([
             variables,
             operationName,
           );
-          expect(result.errors).toBeFalsy();
+          if (checker) {
+            checker(result);
+          } else {
+            expect(result.errors).toBeFalsy();
+          }
           expect(result.data).toEqual(expected);
         },
       );
@@ -558,4 +582,198 @@ describe.each([
       );
     });
   });
+
+  const pgRelationsAttr = `pg${Keyword}Relations`;
+  if (graphileBuildOptions && graphileBuildOptions[pgRelationsAttr]) {
+    describe(pgRelationsAttr, () => {
+      it(
+        "Defaults to omitting other_children where parent is archived",
+        check(
+          /* GraphQL */ `
+            {
+              allOtherChildrenList {
+                id
+              }
+            }
+          `,
+          {
+            allOtherChildrenList: iderize(101, 102),
+          },
+        ),
+      );
+      it(
+        "Includes only other_children of non-archived parents when NO",
+        check(
+          /* GraphQL */ `
+            {
+              allOtherChildrenList(include${Keyword}: NO) {
+                id
+              }
+            }
+          `,
+          {
+            allOtherChildrenList: iderize(101, 102),
+          },
+        ),
+      );
+      it(
+        "Includes all other_children of all parents when YES",
+        check(
+          /* GraphQL */ `
+            {
+              allOtherChildrenList(include${Keyword}: YES) {
+                id
+              }
+            }
+          `,
+          {
+            allOtherChildrenList: iderize(101, 102, 201, 202),
+          },
+        ),
+      );
+      it(
+        "Includes only other_children of archived parents when EXCLUSIVELY",
+        check(
+          /* GraphQL */ `
+            {
+              allOtherChildrenList(include${Keyword}: EXCLUSIVELY) {
+                id
+              }
+            }
+          `,
+          {
+            allOtherChildrenList: iderize(201, 202),
+          },
+        ),
+      );
+
+      it(
+        "Includes all other children that are related by default (due to INHERIT)",
+        check(
+          /* GraphQL */ `
+            {
+              allParentsList(include${Keyword}: YES) {
+                id
+                otherChildrenByParentIdList {
+                  id
+                }
+              }
+            }
+          `,
+          {
+            allParentsList: [
+              { id: 1, otherChildrenByParentIdList: iderize(101, 102) },
+              { id: 2, otherChildrenByParentIdList: iderize(201, 202) },
+            ],
+          },
+        ),
+      );
+      it(
+        "Includes all other children that are related when explicitly INHERIT",
+        check(
+          /* GraphQL */ `
+            {
+              allParentsList(include${Keyword}: YES) {
+                id
+                otherChildrenByParentIdList(include${Keyword}: INHERIT) {
+                  id
+                }
+              }
+            }
+          `,
+          {
+            allParentsList: [
+              { id: 1, otherChildrenByParentIdList: iderize(101, 102) },
+              { id: 2, otherChildrenByParentIdList: iderize(201, 202) },
+            ],
+          },
+        ),
+      );
+      it(
+        "Includes archived other children within relation when explicitly YES",
+        check(
+          /* GraphQL */ `
+            {
+              allParentsList(include${Keyword}: YES) {
+                id
+                otherChildrenByParentIdList(include${Keyword}: YES) {
+                  id
+                }
+              }
+            }
+          `,
+          {
+            allParentsList: [
+              { id: 1, otherChildrenByParentIdList: iderize(101, 102) },
+              { id: 2, otherChildrenByParentIdList: iderize(201, 202) },
+            ],
+          },
+        ),
+      );
+      it(
+        "Omits archived other children within relation when explicitly NO",
+        check(
+          /* GraphQL */ `
+            {
+              allParentsList(include${Keyword}: YES) {
+                id
+                otherChildrenByParentIdList(include${Keyword}: NO) {
+                  id
+                }
+              }
+            }
+          `,
+          {
+            allParentsList: [
+              { id: 1, otherChildrenByParentIdList: iderize(101, 102) },
+              { id: 2, otherChildrenByParentIdList: [] },
+            ],
+          },
+        ),
+      );
+      it(
+        "Only ncludes archived other children within relation when explicitly EXCLUSIVELY",
+        check(
+          /* GraphQL */ `
+            {
+              allParentsList(include${Keyword}: YES) {
+                id
+                otherChildrenByParentIdList(include${Keyword}: EXCLUSIVELY) {
+                  id
+                }
+              }
+            }
+          `,
+          {
+            allParentsList: [
+              { id: 1, otherChildrenByParentIdList: [] },
+              { id: 2, otherChildrenByParentIdList: iderize(201, 202) },
+            ],
+          },
+        ),
+      );
+    });
+  } else {
+    describe(`${pgRelationsAttr} DISABLED`, () => {
+      it(
+        "Does not contain the omit archived fields on OtherChildren",
+        check(
+          /* GraphQL */ `
+            {
+              allOtherChildrenList(include${Keyword}: EXCLUSIVELY) {
+                id
+              }
+            }
+          `,
+          undefined,
+          (result) => {
+            expect(result.errors).toHaveLength(1);
+            expect(result.errors[0].message).toMatch(
+              `Unknown argument "include${Keyword}"`,
+            );
+          },
+        ),
+      );
+    });
+  }
 });

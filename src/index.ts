@@ -7,9 +7,11 @@
 import { makePluginByCombiningPlugins } from "graphile-utils";
 import type { Build, Plugin as GraphileEnginePlugin } from "postgraphile";
 import type {
+  PgAttribute,
   PgClass,
   PgIntrospectionResultsByKind,
   QueryBuilder,
+  SQL,
 } from "graphile-build-pg";
 
 /**
@@ -36,6 +38,7 @@ const makeUtils = (
       // If true inverts the omitting logic (e.g. true for `is_published` or
       // `published_at`; false for `is_archived` or `archived_at`).
       [`pg${Keyword}ColumnImpliesVisible`]: invert = false,
+      [`pg${Keyword}Relations`]: applyToRelations = false,
     },
   } = build;
   const sql = build.pgSql as typeof import("pg-sql2");
@@ -49,7 +52,28 @@ const makeUtils = (
             attr.classId === tableToCheck.id && attr.name === columnNameToCheck,
         )
       : null;
-  const relevantColumn = getRelevantColumn(table);
+
+  // It doesn't apply to us directly; do we have a relation that's relevant?
+  const relevantRelations = applyToRelations
+    ? introspectionResultsByKind.constraint.filter(
+        (c) =>
+          c.type === "f" &&
+          c.classId === table.id &&
+          c.foreignClass &&
+          getRelevantColumn(c.foreignClass),
+      )
+    : [];
+  // Pick the first one (order by constraint name)
+  const relevantRelation = relevantRelations.sort((a, z) =>
+    a.name.localeCompare(z.name),
+  )[0];
+
+  const relevantColumn =
+    getRelevantColumn(table) ||
+    (relevantRelation && relevantRelation.foreignClass
+      ? getRelevantColumn(relevantRelation.foreignClass)
+      : null);
+
   if (!relevantColumn) {
     return null;
   }
@@ -99,7 +123,17 @@ const makeUtils = (
       : [nullableVisibleFragment, nullableInvisibleFragment];
 
   function addWhereClause(queryBuilder: QueryBuilder, fieldArgs: any) {
+    // TypeScript hack
+    if (!relevantColumn) {
+      return;
+    }
     const { [`include${Keyword}`]: relevantSetting } = fieldArgs;
+    let fragment: SQL | null = null;
+
+    const myAlias =
+      relevantColumn.class !== table
+        ? sql.identifier(Symbol("me"))
+        : queryBuilder.getTableAlias();
     if (
       capableOfInherit &&
       relevantSetting === "INHERIT" &&
@@ -107,29 +141,47 @@ const makeUtils = (
       parentColumnDetails
     ) {
       const sqlParentTableAlias = queryBuilder.parentQueryBuilder.getTableAlias();
-      queryBuilder.where(
-        sql.fragment`(${sqlParentTableAlias}.${sql.identifier(
-          parentColumnDetails.name,
-        )} is ${parentInvisibleFragment} or ${queryBuilder.getTableAlias()}.${sql.identifier(
-          columnDetails.name,
-        )} is ${visibleFragment})`,
-      );
+      fragment = sql.fragment`(${sqlParentTableAlias}.${sql.identifier(
+        parentColumnDetails.name,
+      )} is ${parentInvisibleFragment} or ${myAlias}.${sql.identifier(
+        columnDetails.name,
+      )} is ${visibleFragment})`;
     } else if (
       relevantSetting === "NO" ||
       // INHERIT is equivalent to NO if there's no valid parent
       relevantSetting === "INHERIT"
     ) {
-      queryBuilder.where(
-        sql.fragment`${queryBuilder.getTableAlias()}.${sql.identifier(
-          columnDetails.name,
-        )} is ${visibleFragment}`,
-      );
+      fragment = sql.fragment`${myAlias}.${sql.identifier(
+        columnDetails.name,
+      )} is ${visibleFragment}`;
     } else if (relevantSetting === "EXCLUSIVELY") {
-      queryBuilder.where(
-        sql.fragment`${queryBuilder.getTableAlias()}.${sql.identifier(
-          columnDetails.name,
-        )} is ${invisibleFragment}`,
-      );
+      fragment = sql.fragment`${myAlias}.${sql.identifier(
+        columnDetails.name,
+      )} is ${invisibleFragment}`;
+    }
+    if (fragment) {
+      if (relevantRelation && relevantColumn.class !== table) {
+        const localAlias = queryBuilder.getTableAlias();
+        const relationConditions = relevantRelation.keyAttributes.map(
+          (attr, i) => {
+            const otherAttr = relevantRelation.foreignKeyAttributes[i];
+            return sql.fragment`${localAlias}.${sql.identifier(
+              attr.name,
+            )} = ${myAlias}.${sql.identifier(otherAttr.name)}`;
+          },
+        );
+        queryBuilder.where(
+          sql.fragment`(select ${fragment} from ${sql.identifier(
+            relevantColumn.class.namespaceName,
+            relevantColumn.class.name,
+          )} as ${myAlias} where (${sql.join(
+            relationConditions,
+            ") and (",
+          )})) is true`,
+        );
+      } else {
+        queryBuilder.where(fragment);
+      }
     }
   }
   return {
