@@ -9,7 +9,8 @@ example you could hide drafts via a `published_at` column and require an
 explicit `includeDrafts: YES` setting to show them.
 
 It's possible (and common) to use this plugin multiple times (for different
-column names/meanings).
+column names/meanings) - when you do so you must use a different keyword for
+each plugin invocation.
 
 ## Installing
 
@@ -23,18 +24,20 @@ yarn add postgraphile @graphile-contrib/pg-omit-archived
 
 ## Usage
 
-Add a boolean column `is_archived` to your table to indicate whether the record
-should be skipped over by default or not:
+Add a column to your table to indicate whether the record should be skipped over
+by default or not, and then append this plugin to your PostGraphile options. CLI
+usage is more restrictive than library usage, so if you want more powerful
+integration we recommend you use PostGraphile in library (middleware) mode.
+
+### Usage - CLI
+
+If you're using the CLI then you must use a boolean `is_archived` column:
 
 ```sql
 alter table my_table add column is_archived boolean not null default false;
 ```
 
-Then append this plugin to your PostGraphile options.
-
-### Usage - CLI
-
-When using this via the CLI, the database column must be named `is_archived`.
+Then append this plugin with `--append-plugins`:
 
 ```
 postgraphile --append-plugins @graphile-contrib/pg-omit-archived -c postgres:///my_db
@@ -42,8 +45,27 @@ postgraphile --append-plugins @graphile-contrib/pg-omit-archived -c postgres:///
 
 ### Usage - Library
 
-You can modify the archived column name when using PostGraphile as a library,
-e.g.:
+If you're using PostGraphile in library (middleware) mode then you have more
+configuration options and you can specify a column that's _either_ boolean _or_
+nullable; a nullable timestamptz column is a popular choice:
+
+```sql
+alter table my_table add column archived_at timestamptz;
+```
+
+If you're not using a boolean `is_archived` column then you must specify the
+column name, which you can do via the `pgArchivedColumnName` option.
+
+You can also tell the plugin to invert the include/exclude logic with the
+`pgArchivedColumnImpliesVisible` option (e.g. if you're using `is_published`
+you'd set `pgArchivedColumnImpliesVisible: true` rather than the default
+`pgArchivedColumnImpliesVisible: false` which would be appropriate for
+`is_draft`). More information on this below.
+
+Another option is to have the plugin apply to related records with the
+`pgArchivedRelations: true` option - more on this below.
+
+Example:
 
 ```js
 const express = require("express");
@@ -61,6 +83,7 @@ app.use(
     graphileBuildOptions: {
       pgArchivedColumnName: "is_archived",
       pgArchivedColumnImpliesVisible: false,
+      pgArchivedRelations: false,
     },
     /* ☝️☝️☝️ */
   }),
@@ -69,7 +92,10 @@ app.use(
 app.listen(process.env.PORT || 3000);
 ```
 
-You can also use the plugin multiple times for different columns, for example:
+You can also use the plugin multiple times for different columns using the
+`custom(keyword)` plugin factory. When you do this you supply a `keyword` and
+all of the options are based on this keyword so you can configure each plugin
+individually (we also look for the column `is_${keyword}`). For example:
 
 ```js
 const express = require("express");
@@ -90,19 +116,29 @@ app.use(
       customPgOmitArchived("draft"), // e.g. draft vs published
     ],
     graphileBuildOptions: {
-      // Options for 'archived':
-      pgArchivedColumnName: "is_archived", // boolean column -> checked as "IS NOT TRUE"
-      pgArchivedColumnImpliesVisible: false, // when true, hide; when false, visible
+      /* -------- Options for 'archived' -------- */
+      // Boolean column -> checked as "IS NOT TRUE":
+      pgArchivedColumnName: "is_archived",
+      // When true, hide; when false, visible:
+      pgArchivedColumnImpliesVisible: false,
+      // Only add includeArchived to tables with is_archived column:
+      pgArchivedRelations: false,
 
-      // Options for 'deleted':
-      pgDeletedColumnName: "deleted_at", // non-boolean column -> checked as "IS NULL"
+      /* -------- Options for 'deleted' -------- */
+      // Non-boolean column -> checked as "IS NULL":
+      pgDeletedColumnName: "deleted_at",
+      // Also add includeDeleted to tables which belong to a table with
+      // deleted_at column:
+      pgArchivedRelations: true,
 
-      // Options for 'template':
+      /* -------- Options for 'template' -------- */
       pgTemplateColumnName: "is_template",
 
-      // Options for 'draft':
-      pgDraftColumnName: "is_published", // Column name doesn't have to match keyword name
-      pgDraftColumnImpliesVisible: true, // When true -> published -> visible; when false -> unpublished -> hiddel
+      /* -------- Options for 'draft' -------- */
+      // Column name doesn't have to match keyword name:
+      pgDraftColumnName: "is_published",
+      // When true -> published -> visible; when false -> unpublished -> hidden
+      pgDraftColumnImpliesVisible: true,
     },
     /* ☝️☝️☝️ */
   }),
@@ -115,18 +151,28 @@ app.listen(process.env.PORT || 3000);
 
 By default we'll look for a column named after your keyword (e.g. if you use the
 'deleted' keyword, we'll look for an `is_deleted` column). You may override the
-column adding the `pg<Keyword>ColumnName: 'my_column_name_here'` setting to
-`graphileBuildOptions`, where `<Keyword>` is your keyword with the first
-character uppercased (see above for examples).
+column adding the `pg<Keyword>ColumnName: 'my_column_name_here'` (e.g.
+`pgDeletedColumnName: 'deleted_at'`) setting to `graphileBuildOptions`, where
+`<Keyword>` is your keyword with the first character uppercased (see above for
+examples).
 
 This plugin was built expecting to hide things when `true` (boolean) or non-null
 (e.g. nullable timestamp) - this works well for things like `is_archived`,
 `deleted_at`, and `is_template`. However sometimes you want this inverse of this
 behaviour; e.g. if your column is `published_at` you'd want it visible when
 non-null and hidden when null. To invert the behaviour, add the
-`pg<Keyword>ColumnImpliesVisible: true` setting to `graphileBuildOptions`, where
+`pg<Keyword>ColumnImpliesVisible: true` (e.g.
+`pgDraftColumnImpliesVisible: true`) setting to `graphileBuildOptions`, where
 `<Keyword>` is your keyword with the first character uppercased (see above for
 examples).
+
+By default this plugin only adds the `include<Keyword>` (e.g. `includeArchived`)
+argument to collections for tables that have the relevant (e.g. `is_archived`)
+column. Sometimes however you want to expand this behaviour to tables that
+"belong to" this table. To achieve this, use the `pg<Keyword>Relations: true`
+(e.g. `pgArchivedRelations: true`) option. You should use this sparingly as it's
+not implemented particularly efficiently, and it also will make your schema
+somewhat larger/more complex.
 
 ## Behaviour
 
