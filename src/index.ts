@@ -54,13 +54,15 @@ const makeUtils = (
       : null;
 
   // It doesn't apply to us directly; do we have a relation that's relevant?
-  const relevantRelations = introspectionResultsByKind.constraint.filter(
-    (c) =>
-      c.type === "f" &&
-      c.classId === table.id &&
-      c.foreignClass &&
-      getRelevantColumn(c.foreignClass),
-  );
+  const relevantRelations = applyToRelations
+    ? introspectionResultsByKind.constraint.filter(
+        (c) =>
+          c.type === "f" &&
+          c.classId === table.id &&
+          c.foreignClass &&
+          getRelevantColumn(c.foreignClass),
+      )
+    : [];
   // Pick the first one (order by constraint name)
   const relevantRelation = relevantRelations.sort((a, z) =>
     a.name.localeCompare(z.name),
