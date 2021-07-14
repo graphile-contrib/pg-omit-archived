@@ -135,6 +135,20 @@ const makeUtils = (
         ? sql.identifier(Symbol("me"))
         : queryBuilder.getTableAlias();
     if (
+      relevantRelation &&
+      relevantColumn.class !== table &&
+      capableOfInherit &&
+      queryBuilder.parentQueryBuilder &&
+      parentColumnDetails &&
+      ["INHERIT", "YES"].includes(relevantSetting)
+    ) {
+      // In this case the work is already done by the parent record and it
+      // cannot be overridden by this level (since we don't have the relevant
+      // field and we just import ours from the parent); no need to add
+      // any extra WHERE clauses.
+      return;
+    }
+    if (
       capableOfInherit &&
       relevantSetting === "INHERIT" &&
       queryBuilder.parentQueryBuilder &&
