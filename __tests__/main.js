@@ -646,6 +646,112 @@ describe.each([
           },
         ),
       );
+
+      it(
+        "Includes all other children that are related by default (due to INHERIT)",
+        check(
+          /* GraphQL */ `
+            {
+              allParentsList(include${Keyword}: YES) {
+                id
+                otherChildrenByParentIdList {
+                  id
+                }
+              }
+            }
+          `,
+          {
+            allParentsList: [
+              { id: 1, otherChildrenByParentIdList: iderize(101, 102) },
+              { id: 2, otherChildrenByParentIdList: iderize(201, 202) },
+            ],
+          },
+        ),
+      );
+      it(
+        "Includes all other children that are related when explicitly INHERIT",
+        check(
+          /* GraphQL */ `
+            {
+              allParentsList(include${Keyword}: YES) {
+                id
+                otherChildrenByParentIdList(include${Keyword}: INHERIT) {
+                  id
+                }
+              }
+            }
+          `,
+          {
+            allParentsList: [
+              { id: 1, otherChildrenByParentIdList: iderize(101, 102) },
+              { id: 2, otherChildrenByParentIdList: iderize(201, 202) },
+            ],
+          },
+        ),
+      );
+      it(
+        "Includes archived other children within relation when explicitly YES",
+        check(
+          /* GraphQL */ `
+            {
+              allParentsList(include${Keyword}: YES) {
+                id
+                otherChildrenByParentIdList(include${Keyword}: YES) {
+                  id
+                }
+              }
+            }
+          `,
+          {
+            allParentsList: [
+              { id: 1, otherChildrenByParentIdList: iderize(101, 102) },
+              { id: 2, otherChildrenByParentIdList: iderize(201, 202) },
+            ],
+          },
+        ),
+      );
+      it(
+        "Omits archived other children within relation when explicitly NO",
+        check(
+          /* GraphQL */ `
+            {
+              allParentsList(include${Keyword}: YES) {
+                id
+                otherChildrenByParentIdList(include${Keyword}: NO) {
+                  id
+                }
+              }
+            }
+          `,
+          {
+            allParentsList: [
+              { id: 1, otherChildrenByParentIdList: iderize(101, 102) },
+              { id: 2, otherChildrenByParentIdList: [] },
+            ],
+          },
+        ),
+      );
+      it(
+        "Only ncludes archived other children within relation when explicitly EXCLUSIVELY",
+        check(
+          /* GraphQL */ `
+            {
+              allParentsList(include${Keyword}: YES) {
+                id
+                otherChildrenByParentIdList(include${Keyword}: EXCLUSIVELY) {
+                  id
+                }
+              }
+            }
+          `,
+          {
+            allParentsList: [
+              { id: 1, otherChildrenByParentIdList: [] },
+              { id: 2, otherChildrenByParentIdList: iderize(201, 202) },
+            ],
+          },
+        ),
+      );
     });
   } else {
     describe(`${pgRelationsAttr} DISABLED`, () => {
