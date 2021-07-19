@@ -57,7 +57,7 @@ const makeUtils = (
       : null;
 
   if (relevantRelation) {
-    if (!applyToRelations) {
+    if (!applyToRelations && !relevantRelation.tags[`${keyword}Relation`]) {
       return null;
     }
     if (
