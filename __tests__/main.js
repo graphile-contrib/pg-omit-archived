@@ -155,12 +155,12 @@ describe.each([
         "Omits archived parents by default",
         check(
           `{
-          allParents {
-            nodes {
-              id
+            allParents {
+              nodes {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           { allParents: { nodes: iderize(1) } },
         ),
       );
@@ -169,12 +169,12 @@ describe.each([
         "Omits archived parents when NO",
         check(
           `{
-          allParents(include${Keyword}: NO) {
-            nodes {
-              id
+            allParents(include${Keyword}: NO) {
+              nodes {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           { allParents: { nodes: iderize(1) } },
         ),
       );
@@ -183,12 +183,12 @@ describe.each([
         "Includes everything when YES",
         check(
           `{
-          allParents(include${Keyword}: YES) {
-            nodes {
-              id
+            allParents(include${Keyword}: YES) {
+              nodes {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           { allParents: { nodes: iderize(1, 2) } },
         ),
       );
@@ -197,12 +197,12 @@ describe.each([
         "Includes only archived when EXCLUSIVELY",
         check(
           `{
-          allParents(include${Keyword}: EXCLUSIVELY) {
-            nodes {
-              id
+            allParents(include${Keyword}: EXCLUSIVELY) {
+              nodes {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           { allParents: { nodes: iderize(2) } },
         ),
       );
@@ -214,12 +214,12 @@ describe.each([
           "Omits archived children (and those with archived parents) by default",
           check(
             `{
-          allChildren {
-            nodes {
-              id
-            }
-          }
-        }`,
+              allChildren {
+                nodes {
+                  id
+                }
+              }
+            }`,
             { allChildren: { nodes: iderize(1001) } },
           ),
         );
@@ -228,12 +228,12 @@ describe.each([
           "Omits archived children by default",
           check(
             `{
-          allChildren {
-            nodes {
-              id
-            }
-          }
-        }`,
+              allChildren {
+                nodes {
+                  id
+                }
+              }
+            }`,
             { allChildren: { nodes: iderize(1001, 2001) } },
           ),
         );
@@ -244,12 +244,12 @@ describe.each([
           "Omits archived children (and those with archived parents) when NO",
           check(
             `{
-          allChildren(include${Keyword}: NO) {
-            nodes {
-              id
-            }
-          }
-        }`,
+              allChildren(include${Keyword}: NO) {
+                nodes {
+                  id
+                }
+              }
+            }`,
             { allChildren: { nodes: iderize(1001) } },
           ),
         );
@@ -258,12 +258,12 @@ describe.each([
           "Omits archived children when NO",
           check(
             `{
-          allChildren(include${Keyword}: NO) {
-            nodes {
-              id
-            }
-          }
-        }`,
+              allChildren(include${Keyword}: NO) {
+                nodes {
+                  id
+                }
+              }
+            }`,
             { allChildren: { nodes: iderize(1001, 2001) } },
           ),
         );
@@ -386,17 +386,17 @@ describe.each([
         "Omits archived parents and children by default",
         check(
           `{
-          allParents {
-            nodes {
-              id
-              childrenByParentId {
-                nodes {
-                  id
+            allParents {
+              nodes {
+                id
+                childrenByParentId {
+                  nodes {
+                    id
+                  }
                 }
               }
             }
-          }
-        }`,
+          }`,
           {
             allParents: {
               nodes: [
@@ -414,17 +414,17 @@ describe.each([
         "Omits archived parents and children when NO",
         check(
           `{
-          allParents(include${Keyword}: NO) {
-            nodes {
-              id
-              childrenByParentId {
-                nodes {
-                  id
+            allParents(include${Keyword}: NO) {
+              nodes {
+                id
+                childrenByParentId {
+                  nodes {
+                    id
+                  }
                 }
               }
             }
-          }
-        }`,
+          }`,
           {
             allParents: {
               nodes: [
@@ -442,17 +442,17 @@ describe.each([
         "Includes all parents, and treats children as INHERIT (all children of an archived parent, but only the unarchived children of an unarchived parent) when YES",
         check(
           `{
-          allParents(include${Keyword}: YES) {
-            nodes {
-              id
-              childrenByParentId {
-                nodes {
-                  id
+            allParents(include${Keyword}: YES) {
+              nodes {
+                id
+                childrenByParentId {
+                  nodes {
+                    id
+                  }
                 }
               }
             }
-          }
-        }`,
+          }`,
           {
             allParents: {
               nodes: [
@@ -474,17 +474,17 @@ describe.each([
         "Includes only archived parents (and all their children) when EXCLUSIVELY",
         check(
           `{
-          allParents(include${Keyword}: EXCLUSIVELY) {
-            nodes {
-              id
-              childrenByParentId {
-                nodes {
-                  id
+            allParents(include${Keyword}: EXCLUSIVELY) {
+              nodes {
+                id
+                childrenByParentId {
+                  nodes {
+                    id
+                  }
                 }
               }
             }
-          }
-        }`,
+          }`,
           {
             allParents: {
               nodes: [
@@ -506,10 +506,10 @@ describe.each([
         "Omits archived parents by default",
         check(
           `{
-          allParentsList {
-            id
-          }
-        }`,
+            allParentsList {
+              id
+            }
+          }`,
           { allParentsList: iderize(1) },
         ),
       );
@@ -518,10 +518,10 @@ describe.each([
         "Omits archived parents when NO",
         check(
           `{
-          allParentsList(include${Keyword}: NO) {
-            id
-          }
-        }`,
+            allParentsList(include${Keyword}: NO) {
+              id
+            }
+          }`,
           { allParentsList: iderize(1) },
         ),
       );
@@ -530,10 +530,10 @@ describe.each([
         "Includes everything when YES",
         check(
           `{
-          allParentsList(include${Keyword}: YES) {
-            id
-          }
-        }`,
+            allParentsList(include${Keyword}: YES) {
+              id
+            }
+          }`,
           { allParentsList: iderize(1, 2) },
         ),
       );
@@ -542,10 +542,10 @@ describe.each([
         "Includes only archived when EXCLUSIVELY",
         check(
           `{
-          allParentsList(include${Keyword}: EXCLUSIVELY) {
-            id
-          }
-        }`,
+            allParentsList(include${Keyword}: EXCLUSIVELY) {
+              id
+            }
+          }`,
           { allParentsList: iderize(2) },
         ),
       );
@@ -701,13 +701,13 @@ describe.each([
         "Omits archived parents and children by default",
         check(
           `{
-          allParentsList {
-            id
-            childrenByParentIdList {
+            allParentsList {
               id
+              childrenByParentIdList {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           {
             allParentsList: [
               {
@@ -723,13 +723,13 @@ describe.each([
         "Omits archived parents and children when NO",
         check(
           `{
-          allParentsList(include${Keyword}: NO) {
-            id
-            childrenByParentIdList {
+            allParentsList(include${Keyword}: NO) {
               id
+              childrenByParentIdList {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           {
             allParentsList: [
               {
@@ -745,13 +745,13 @@ describe.each([
         "Includes all parents, and treats children as INHERIT (all children of an archived parent, but only the unarchived children of an unarchived parent) when YES",
         check(
           `{
-          allParentsList(include${Keyword}: YES) {
-            id
-            childrenByParentIdList {
+            allParentsList(include${Keyword}: YES) {
               id
+              childrenByParentIdList {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           {
             allParentsList: [
               {
@@ -771,13 +771,13 @@ describe.each([
         "Includes only archived parents (and all their children) when EXCLUSIVELY",
         check(
           `{
-          allParentsList(include${Keyword}: EXCLUSIVELY) {
-            id
-            childrenByParentIdList {
+            allParentsList(include${Keyword}: EXCLUSIVELY) {
               id
+              childrenByParentIdList {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           {
             allParentsList: [
               {
