@@ -30,6 +30,7 @@ const makeUtils = (
   table: PgClass,
   parentTable: PgClass,
   allowInherit?: boolean,
+  relevantRelation?: PgConstraint | null,
 ) => {
   const Keyword = keyword[0].toUpperCase() + keyword.slice(1);
   const {
@@ -55,164 +56,159 @@ const makeUtils = (
         )
       : null;
 
-  const relevantRelations = applyToRelations
-    ? introspectionResultsByKind.constraint.filter(
-        (c) =>
-          c.type === "f" &&
-          c.classId === table.id &&
-          c.foreignClass &&
-          getRelevantColumn(c.foreignClass),
-      )
-    : [];
-  // Order by constraint name
-  relevantRelations.sort((a, z) => a.name.localeCompare(z.name));
+  if (relevantRelation) {
+    if (!applyToRelations) {
+      return null;
+    }
+    if (
+      !relevantRelation.foreignClass ||
+      relevantRelation.classId !== table.id ||
+      !getRelevantColumn(relevantRelation.foreignClass)
+    ) {
+      return null;
+    }
+  }
 
-  const selfAndRelations = [null, ...relevantRelations];
+  const relevantColumn = relevantRelation
+    ? relevantRelation.foreignClass
+      ? getRelevantColumn(relevantRelation.foreignClass)
+      : null
+    : getRelevantColumn(table);
 
-  return selfAndRelations
-    .map((relevantRelation) => {
-      const relevantColumn = relevantRelation
-        ? relevantRelation.foreignClass
-          ? getRelevantColumn(relevantRelation.foreignClass)
-          : null
-        : getRelevantColumn(table);
+  if (!relevantColumn) {
+    return null;
+  }
 
-      if (!relevantColumn) {
-        return null;
+  const argumentName = inflection[`include${Keyword}Argument`](
+    table,
+    relevantRelation,
+  );
+
+  const parentTableRelevantColumn = getRelevantColumn(parentTable);
+  const capableOfInherit = allowInherit && !!parentTableRelevantColumn;
+  const pgRelevantColumnIsBoolean = relevantColumn.type.category === "B";
+  const pgParentRelevantColumnIsBoolean =
+    parentTableRelevantColumn &&
+    parentTableRelevantColumn.type.category === "B";
+
+  const columnDetails = {
+    isBoolean: pgRelevantColumnIsBoolean,
+    name: relevantColumn.name,
+  };
+  const parentColumnDetails = parentTableRelevantColumn
+    ? {
+        isBoolean: pgParentRelevantColumnIsBoolean,
+        canInherit: capableOfInherit,
+        name: parentTableRelevantColumn.name,
       }
+    : null;
 
-      const argumentName = inflection[`include${Keyword}Argument`](
-        table,
-        relevantRelation,
-      );
+  const booleanVisibleFragment = invert
+    ? sql.fragment`true`
+    : sql.fragment`false`;
 
-      const parentTableRelevantColumn = getRelevantColumn(parentTable);
-      const capableOfInherit = allowInherit && !!parentTableRelevantColumn;
-      const pgRelevantColumnIsBoolean = relevantColumn.type.category === "B";
-      const pgParentRelevantColumnIsBoolean =
-        parentTableRelevantColumn &&
-        parentTableRelevantColumn.type.category === "B";
+  const booleanInvisibleFragment = invert
+    ? sql.fragment`not true`
+    : sql.fragment`not false`; // Keep in mind booleans are trinary in Postgres: true, false, null
 
-      const columnDetails = {
-        isBoolean: pgRelevantColumnIsBoolean,
-        name: relevantColumn.name,
-      };
-      const parentColumnDetails = parentTableRelevantColumn
-        ? {
-            isBoolean: pgParentRelevantColumnIsBoolean,
-            canInherit: capableOfInherit,
-            name: parentTableRelevantColumn.name,
-          }
-        : null;
+  const nullableVisibleFragment = invert
+    ? sql.fragment`not null`
+    : sql.fragment`null`;
 
-      const booleanVisibleFragment = invert
-        ? sql.fragment`true`
-        : sql.fragment`false`;
+  const nullableInvisibleFragment = invert
+    ? sql.fragment`null`
+    : sql.fragment`not null`;
 
-      const booleanInvisibleFragment = invert
-        ? sql.fragment`not true`
-        : sql.fragment`not false`; // Keep in mind booleans are trinary in Postgres: true, false, null
+  const [visibleFragment, invisibleFragment] = columnDetails.isBoolean
+    ? [booleanVisibleFragment, booleanInvisibleFragment]
+    : [nullableVisibleFragment, nullableInvisibleFragment];
 
-      const nullableVisibleFragment = invert
-        ? sql.fragment`not null`
-        : sql.fragment`null`;
+  const [_parentVisibleFragment, parentInvisibleFragment] =
+    parentColumnDetails && parentColumnDetails.isBoolean
+      ? [booleanVisibleFragment, booleanInvisibleFragment]
+      : [nullableVisibleFragment, nullableInvisibleFragment];
 
-      const nullableInvisibleFragment = invert
-        ? sql.fragment`null`
-        : sql.fragment`not null`;
+  function addWhereClause(queryBuilder: QueryBuilder, fieldArgs: any) {
+    // TypeScript hack
+    if (!relevantColumn) {
+      return;
+    }
+    const { [argumentName]: relevantSetting } = fieldArgs;
+    let fragment: SQL | null = null;
 
-      const [visibleFragment, invisibleFragment] = columnDetails.isBoolean
-        ? [booleanVisibleFragment, booleanInvisibleFragment]
-        : [nullableVisibleFragment, nullableInvisibleFragment];
-
-      const [_parentVisibleFragment, parentInvisibleFragment] =
-        parentColumnDetails && parentColumnDetails.isBoolean
-          ? [booleanVisibleFragment, booleanInvisibleFragment]
-          : [nullableVisibleFragment, nullableInvisibleFragment];
-
-      function addWhereClause(queryBuilder: QueryBuilder, fieldArgs: any) {
-        // TypeScript hack
-        if (!relevantColumn) {
-          return;
-        }
-        const { [argumentName]: relevantSetting } = fieldArgs;
-        let fragment: SQL | null = null;
-
-        const myAlias =
-          relevantColumn.class !== table
-            ? sql.identifier(Symbol("me"))
-            : queryBuilder.getTableAlias();
-        if (
-          relevantRelation &&
-          relevantColumn.class !== table &&
-          capableOfInherit &&
-          queryBuilder.parentQueryBuilder &&
-          parentColumnDetails &&
-          ["INHERIT", "YES"].includes(relevantSetting)
-        ) {
-          // In this case the work is already done by the parent record and it
-          // cannot be overridden by this level (since we don't have the relevant
-          // field and we just import ours from the parent); no need to add
-          // any extra WHERE clauses.
-          return;
-        }
-        if (
-          capableOfInherit &&
-          relevantSetting === "INHERIT" &&
-          queryBuilder.parentQueryBuilder &&
-          parentColumnDetails
-        ) {
-          const sqlParentTableAlias = queryBuilder.parentQueryBuilder.getTableAlias();
-          fragment = sql.fragment`(${sqlParentTableAlias}.${sql.identifier(
-            parentColumnDetails.name,
-          )} is ${parentInvisibleFragment} or ${myAlias}.${sql.identifier(
-            columnDetails.name,
-          )} is ${visibleFragment})`;
-        } else if (
-          relevantSetting === "NO" ||
-          // INHERIT is equivalent to NO if there's no valid parent
-          relevantSetting === "INHERIT"
-        ) {
-          fragment = sql.fragment`${myAlias}.${sql.identifier(
-            columnDetails.name,
-          )} is ${visibleFragment}`;
-        } else if (relevantSetting === "EXCLUSIVELY") {
-          fragment = sql.fragment`${myAlias}.${sql.identifier(
-            columnDetails.name,
-          )} is ${invisibleFragment}`;
-        }
-        if (fragment) {
-          if (relevantRelation && relevantColumn.class !== table) {
-            const localAlias = queryBuilder.getTableAlias();
-            const relationConditions = relevantRelation.keyAttributes.map(
-              (attr, i) => {
-                const otherAttr = relevantRelation.foreignKeyAttributes[i];
-                return sql.fragment`${localAlias}.${sql.identifier(
-                  attr.name,
-                )} = ${myAlias}.${sql.identifier(otherAttr.name)}`;
-              },
-            );
-            const subquery = sql.fragment`(select ${fragment} from ${sql.identifier(
-              relevantColumn.class.namespaceName,
-              relevantColumn.class.name,
-            )} as ${myAlias} where (${sql.join(
-              relationConditions,
-              ") and (",
-            )})) is true`;
-            queryBuilder.where(subquery);
-          } else {
-            queryBuilder.where(fragment);
-          }
-        }
+    const myAlias =
+      relevantColumn.class !== table
+        ? sql.identifier(Symbol("me"))
+        : queryBuilder.getTableAlias();
+    if (
+      relevantRelation &&
+      relevantColumn.class !== table &&
+      capableOfInherit &&
+      queryBuilder.parentQueryBuilder &&
+      parentColumnDetails &&
+      ["INHERIT", "YES"].includes(relevantSetting)
+    ) {
+      // In this case the work is already done by the parent record and it
+      // cannot be overridden by this level (since we don't have the relevant
+      // field and we just import ours from the parent); no need to add
+      // any extra WHERE clauses.
+      return;
+    }
+    if (
+      capableOfInherit &&
+      relevantSetting === "INHERIT" &&
+      queryBuilder.parentQueryBuilder &&
+      parentColumnDetails
+    ) {
+      const sqlParentTableAlias = queryBuilder.parentQueryBuilder.getTableAlias();
+      fragment = sql.fragment`(${sqlParentTableAlias}.${sql.identifier(
+        parentColumnDetails.name,
+      )} is ${parentInvisibleFragment} or ${myAlias}.${sql.identifier(
+        columnDetails.name,
+      )} is ${visibleFragment})`;
+    } else if (
+      relevantSetting === "NO" ||
+      // INHERIT is equivalent to NO if there's no valid parent
+      relevantSetting === "INHERIT"
+    ) {
+      fragment = sql.fragment`${myAlias}.${sql.identifier(
+        columnDetails.name,
+      )} is ${visibleFragment}`;
+    } else if (relevantSetting === "EXCLUSIVELY") {
+      fragment = sql.fragment`${myAlias}.${sql.identifier(
+        columnDetails.name,
+      )} is ${invisibleFragment}`;
+    }
+    if (fragment) {
+      if (relevantRelation && relevantColumn.class !== table) {
+        const localAlias = queryBuilder.getTableAlias();
+        const relationConditions = relevantRelation.keyAttributes.map(
+          (attr, i) => {
+            const otherAttr = relevantRelation.foreignKeyAttributes[i];
+            return sql.fragment`${localAlias}.${sql.identifier(
+              attr.name,
+            )} = ${myAlias}.${sql.identifier(otherAttr.name)}`;
+          },
+        );
+        const subquery = sql.fragment`(select ${fragment} from ${sql.identifier(
+          relevantColumn.class.namespaceName,
+          relevantColumn.class.name,
+        )} as ${myAlias} where (${sql.join(
+          relationConditions,
+          ") and (",
+        )})) is true`;
+        queryBuilder.where(subquery);
+      } else {
+        queryBuilder.where(fragment);
       }
-      return {
-        OptionType,
-        addWhereClause,
-        capableOfInherit,
-        argumentName,
-      };
-    })
-    .filter(<T>(value: T | null | undefined): value is T => value != null);
+    }
+  }
+  return {
+    OptionType,
+    addWhereClause,
+    capableOfInherit,
+    argumentName,
+  };
 };
 
 /*
@@ -341,7 +337,7 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
             isPgFieldConnection,
             isPgFieldSimpleCollection,
             isPgBackwardRelationField,
-            pgFieldIntrospection: table,
+            pgFieldIntrospection,
             pgIntrospection: parentTable,
             [`include${Keyword}`]: includeArchived,
           },
@@ -349,6 +345,7 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
           Self,
           field,
         } = context;
+        const table: PgClass = pgFieldIntrospection;
         if (
           !(isPgFieldConnection || isPgFieldSimpleCollection) ||
           !table ||
@@ -359,17 +356,22 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
           return args;
         }
         const allowInherit = isPgBackwardRelationField;
-        const allUtils = makeUtils(
-          build,
-          keyword,
-          table,
-          parentTable,
-          allowInherit,
+        const selfAndConstraints = [
+          null,
+          ...table.constraints
+            .filter((c) => c.type === "f")
+            .sort((a, z) => a.name.localeCompare(z.name)),
+        ];
+        const allUtils = selfAndConstraints.map((relation) =>
+          makeUtils(build, keyword, table, parentTable, allowInherit, relation),
         );
         if (!allUtils || allUtils.length === 0) {
           return args;
         }
         return allUtils.reduce((args, utils) => {
+          if (!utils) {
+            return args;
+          }
           const {
             addWhereClause,
             OptionType,
