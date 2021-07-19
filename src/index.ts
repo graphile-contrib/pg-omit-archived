@@ -9,6 +9,7 @@ import type { Build, Plugin as GraphileEnginePlugin } from "postgraphile";
 import type {
   PgAttribute,
   PgClass,
+  PgConstraint,
   PgIntrospectionResultsByKind,
   QueryBuilder,
   SQL,
@@ -29,9 +30,11 @@ const makeUtils = (
   table: PgClass,
   parentTable: PgClass,
   allowInherit?: boolean,
+  relevantRelation?: PgConstraint | null,
 ) => {
   const Keyword = keyword[0].toUpperCase() + keyword.slice(1);
   const {
+    inflection,
     getTypeByName,
     options: {
       [`pg${Keyword}ColumnName`]: columnNameToCheck = `is_${keyword}`,
@@ -53,30 +56,33 @@ const makeUtils = (
         )
       : null;
 
-  // It doesn't apply to us directly; do we have a relation that's relevant?
-  const relevantRelations = applyToRelations
-    ? introspectionResultsByKind.constraint.filter(
-        (c) =>
-          c.type === "f" &&
-          c.classId === table.id &&
-          c.foreignClass &&
-          getRelevantColumn(c.foreignClass),
-      )
-    : [];
-  // Pick the first one (order by constraint name)
-  const relevantRelation = relevantRelations.sort((a, z) =>
-    a.name.localeCompare(z.name),
-  )[0];
+  if (relevantRelation) {
+    if (!applyToRelations) {
+      return null;
+    }
+    if (
+      !relevantRelation.foreignClass ||
+      relevantRelation.classId !== table.id ||
+      !getRelevantColumn(relevantRelation.foreignClass)
+    ) {
+      return null;
+    }
+  }
 
-  const relevantColumn =
-    getRelevantColumn(table) ||
-    (relevantRelation && relevantRelation.foreignClass
+  const relevantColumn = relevantRelation
+    ? relevantRelation.foreignClass
       ? getRelevantColumn(relevantRelation.foreignClass)
-      : null);
+      : null
+    : getRelevantColumn(table);
 
   if (!relevantColumn) {
     return null;
   }
+
+  const argumentName = inflection[`include${Keyword}Argument`](
+    table,
+    relevantRelation,
+  );
 
   const parentTableRelevantColumn = getRelevantColumn(parentTable);
   const capableOfInherit = allowInherit && !!parentTableRelevantColumn;
@@ -127,7 +133,7 @@ const makeUtils = (
     if (!relevantColumn) {
       return;
     }
-    const { [`include${Keyword}`]: relevantSetting } = fieldArgs;
+    const { [argumentName]: relevantSetting } = fieldArgs;
     let fragment: SQL | null = null;
 
     const myAlias =
@@ -184,15 +190,14 @@ const makeUtils = (
             )} = ${myAlias}.${sql.identifier(otherAttr.name)}`;
           },
         );
-        queryBuilder.where(
-          sql.fragment`(select ${fragment} from ${sql.identifier(
-            relevantColumn.class.namespaceName,
-            relevantColumn.class.name,
-          )} as ${myAlias} where (${sql.join(
-            relationConditions,
-            ") and (",
-          )})) is true`,
-        );
+        const subquery = sql.fragment`(select ${fragment} from ${sql.identifier(
+          relevantColumn.class.namespaceName,
+          relevantColumn.class.name,
+        )} as ${myAlias} where (${sql.join(
+          relationConditions,
+          ") and (",
+        )})) is true`;
+        queryBuilder.where(subquery);
       } else {
         queryBuilder.where(fragment);
       }
@@ -202,6 +207,7 @@ const makeUtils = (
     OptionType,
     addWhereClause,
     capableOfInherit,
+    argumentName,
   };
 };
 
@@ -252,6 +258,37 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
     },
   }));
   */
+
+  const AddInflectorsPlugin: GraphileEnginePlugin = (builder) => {
+    builder.hook("inflection", (inflection, build) => {
+      return build.extend(
+        inflection,
+        {
+          [`include${Keyword}Argument`](
+            table: PgClass,
+            relation: PgConstraint,
+          ) {
+            const relationPart = relation
+              ? inflection.singleRelationByKeys(
+                  relation.keyAttributes,
+                  relation.foreignClass,
+                  table,
+                  relation,
+                )
+              : null;
+            const argumentName = relationPart
+              ? `includeWhen${inflection.upperCamelCase(
+                  relationPart,
+                )}${Keyword}`
+              : `include${Keyword}`;
+            return argumentName;
+          },
+        },
+        `Adding inflectors for '${keyword}' pg-omit-archived`,
+      );
+    });
+  };
+
   const AddToEnumPlugin: GraphileEnginePlugin = (builder) => {
     /* Had to move this to the build phase so that other plugins can use it */
     builder.hook("build", (build) => {
@@ -300,7 +337,7 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
             isPgFieldConnection,
             isPgFieldSimpleCollection,
             isPgBackwardRelationField,
-            pgFieldIntrospection: table,
+            pgFieldIntrospection,
             pgIntrospection: parentTable,
             [`include${Keyword}`]: includeArchived,
           },
@@ -308,52 +345,68 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
           Self,
           field,
         } = context;
+        const table: PgClass = pgFieldIntrospection;
         if (
           !(isPgFieldConnection || isPgFieldSimpleCollection) ||
           !table ||
           table.kind !== "class" ||
           !table.namespace ||
-          !!args[`include${Keyword}`] ||
           includeArchived
         ) {
           return args;
         }
         const allowInherit = isPgBackwardRelationField;
-        const utils = makeUtils(
-          build,
-          keyword,
-          table,
-          parentTable,
-          allowInherit,
+        const selfAndConstraints = [
+          null,
+          ...table.constraints
+            .filter((c) => c.type === "f")
+            .sort((a, z) => a.name.localeCompare(z.name)),
+        ];
+        const allUtils = selfAndConstraints.map((relation) =>
+          makeUtils(build, keyword, table, parentTable, allowInherit, relation),
         );
-        if (!utils) {
+        if (!allUtils) {
           return args;
         }
-        const { addWhereClause, OptionType, capableOfInherit } = utils;
-        addArgDataGenerator(function connectionCondition(fieldArgs: any) {
-          return {
-            pgQuery: (queryBuilder: QueryBuilder) => {
-              addWhereClause(queryBuilder, fieldArgs);
-            },
-          };
-        });
+        return allUtils.reduce((args, utils) => {
+          if (!utils) {
+            return args;
+          }
+          const {
+            addWhereClause,
+            OptionType,
+            capableOfInherit,
+            argumentName,
+          } = utils;
+          if (!!args[argumentName]) {
+            return args;
+          }
+          addArgDataGenerator(function connectionCondition(fieldArgs: any) {
+            return {
+              pgQuery: (queryBuilder: QueryBuilder) => {
+                addWhereClause(queryBuilder, fieldArgs);
+              },
+            };
+          });
 
-        return extend(
-          args,
-          {
-            [`include${Keyword}`]: {
-              description: `Indicates whether ${keyword} items should be included in the results or not.`,
-              type: OptionType,
-              defaultValue: capableOfInherit ? "INHERIT" : "NO",
+          return extend(
+            args,
+            {
+              [argumentName]: {
+                description: `Indicates whether ${keyword} items should be included in the results or not.`,
+                type: OptionType,
+                defaultValue: capableOfInherit ? "INHERIT" : "NO",
+              },
             },
-          },
-          `Adding include${Keyword} argument to connection field '${field.name}' of '${Self.name}'`,
-        );
+            `Adding ${argumentName} argument to connection field '${field.name}' of '${Self.name}'`,
+          );
+        }, args);
       },
     );
   };
 
   const Plugin = makePluginByCombiningPlugins(
+    AddInflectorsPlugin,
     AddToEnumPlugin,
     PgOmitInnerPlugin,
   );

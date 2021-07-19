@@ -112,6 +112,10 @@ describe.each([
     simpleCollections: "both",
     graphileBuildOptions,
   };
+  const pgRelationsAttr = `pg${Keyword}Relations`;
+  const pgArchivedRelations = graphileBuildOptions
+    ? graphileBuildOptions[pgRelationsAttr] || false
+    : false;
   beforeAll(async () => {
     schema = await createPostGraphileSchema(pgPool, ["omit_archived"], options);
   });
@@ -151,12 +155,12 @@ describe.each([
         "Omits archived parents by default",
         check(
           `{
-          allParents {
-            nodes {
-              id
+            allParents {
+              nodes {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           { allParents: { nodes: iderize(1) } },
         ),
       );
@@ -165,12 +169,12 @@ describe.each([
         "Omits archived parents when NO",
         check(
           `{
-          allParents(include${Keyword}: NO) {
-            nodes {
-              id
+            allParents(include${Keyword}: NO) {
+              nodes {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           { allParents: { nodes: iderize(1) } },
         ),
       );
@@ -179,12 +183,12 @@ describe.each([
         "Includes everything when YES",
         check(
           `{
-          allParents(include${Keyword}: YES) {
-            nodes {
-              id
+            allParents(include${Keyword}: YES) {
+              nodes {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           { allParents: { nodes: iderize(1, 2) } },
         ),
       );
@@ -193,77 +197,188 @@ describe.each([
         "Includes only archived when EXCLUSIVELY",
         check(
           `{
-          allParents(include${Keyword}: EXCLUSIVELY) {
-            nodes {
-              id
+            allParents(include${Keyword}: EXCLUSIVELY) {
+              nodes {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           { allParents: { nodes: iderize(2) } },
         ),
       );
     });
 
     describe("children", () => {
-      test(
-        "Omits archived children by default",
-        check(
-          `{
-          allChildren {
-            nodes {
-              id
-            }
-          }
-        }`,
-          { allChildren: { nodes: iderize(1001, 2001) } },
-        ),
-      );
+      if (pgArchivedRelations) {
+        test(
+          "Omits archived children (and those with archived parents) by default",
+          check(
+            `{
+              allChildren {
+                nodes {
+                  id
+                }
+              }
+            }`,
+            { allChildren: { nodes: iderize(1001) } },
+          ),
+        );
+      } else {
+        test(
+          "Omits archived children by default",
+          check(
+            `{
+              allChildren {
+                nodes {
+                  id
+                }
+              }
+            }`,
+            { allChildren: { nodes: iderize(1001, 2001) } },
+          ),
+        );
+      }
 
-      test(
-        "Omits archived children when NO",
-        check(
-          `{
-          allChildren(include${Keyword}: NO) {
-            nodes {
-              id
-            }
-          }
-        }`,
-          { allChildren: { nodes: iderize(1001, 2001) } },
-        ),
-      );
+      if (pgArchivedRelations) {
+        test(
+          "Omits archived children (and those with archived parents) when NO",
+          check(
+            `{
+              allChildren(include${Keyword}: NO) {
+                nodes {
+                  id
+                }
+              }
+            }`,
+            { allChildren: { nodes: iderize(1001) } },
+          ),
+        );
+      } else {
+        test(
+          "Omits archived children when NO",
+          check(
+            `{
+              allChildren(include${Keyword}: NO) {
+                nodes {
+                  id
+                }
+              }
+            }`,
+            { allChildren: { nodes: iderize(1001, 2001) } },
+          ),
+        );
+      }
 
-      test(
-        "Includes everything when YES",
-        check(
-          `{
-          allChildren(include${Keyword}: YES) {
-            nodes {
-              id
-            }
-          }
-        }`,
-          {
-            allChildren: {
-              nodes: iderize(1001, 1002, 2001, 2002),
+      if (pgArchivedRelations) {
+        test(
+          "Includes everything (except those with archived parents) when YES",
+          check(
+            `{
+              allChildren(include${Keyword}: YES) {
+                nodes {
+                  id
+                }
+              }
+            }`,
+            {
+              allChildren: {
+                nodes: iderize(1001, 1002),
+              },
             },
-          },
-        ),
-      );
+          ),
+        );
+        test(
+          "Includes everything when double YES",
+          check(
+            `{
+              allChildren(include${Keyword}: YES, includeWhenParentByParentId${Keyword}: YES) {
+                nodes {
+                  id
+                }
+              }
+            }`,
+            {
+              allChildren: {
+                nodes: iderize(1001, 1002, 2001, 2002),
+              },
+            },
+          ),
+        );
+      } else {
+        test(
+          "Includes everything when YES",
+          check(
+            `{
+              allChildren(include${Keyword}: YES) {
+                nodes {
+                  id
+                }
+              }
+            }`,
+            {
+              allChildren: {
+                nodes: iderize(1001, 1002, 2001, 2002),
+              },
+            },
+          ),
+        );
+      }
 
-      test(
-        "Includes only archived when EXCLUSIVELY",
-        check(
-          `{
-          allChildren(include${Keyword}: EXCLUSIVELY) {
-            nodes {
-              id
-            }
-          }
-        }`,
-          { allChildren: { nodes: iderize(1002, 2002) } },
-        ),
-      );
+      if (pgArchivedRelations) {
+        test(
+          "Includes only archived (with non-archived parents) when EXCLUSIVELY",
+          check(
+            `{
+              allChildren(include${Keyword}: EXCLUSIVELY) {
+                nodes {
+                  id
+                }
+              }
+            }`,
+            { allChildren: { nodes: iderize(1002) } },
+          ),
+        );
+        test(
+          "Includes only archived (even those of archived parents) when YES/EXCLUSIVELY",
+          check(
+            `{
+              allChildren(include${Keyword}: EXCLUSIVELY, includeWhenParentByParentId${Keyword}: YES) {
+                nodes {
+                  id
+                }
+              }
+            }`,
+            { allChildren: { nodes: iderize(1002, 2002) } },
+          ),
+        );
+        test(
+          "Includes only archived of archived parents when EXCLUSIVELY/EXCLUSIVELY",
+          check(
+            `{
+              allChildren(include${Keyword}: EXCLUSIVELY, includeWhenParentByParentId${Keyword}: EXCLUSIVELY) {
+                nodes {
+                  id
+                }
+              }
+            }`,
+            { allChildren: { nodes: iderize(2002) } },
+          ),
+        );
+      } else {
+        test(
+          "Includes only archived when EXCLUSIVELY",
+          check(
+            `{
+              allChildren(include${Keyword}: EXCLUSIVELY) {
+                nodes {
+                  id
+                }
+              }
+            }`,
+            { allChildren: { nodes: iderize(1002, 2002) } },
+          ),
+        );
+      }
     });
 
     describe("children of parents", () => {
@@ -271,17 +386,17 @@ describe.each([
         "Omits archived parents and children by default",
         check(
           `{
-          allParents {
-            nodes {
-              id
-              childrenByParentId {
-                nodes {
-                  id
+            allParents {
+              nodes {
+                id
+                childrenByParentId {
+                  nodes {
+                    id
+                  }
                 }
               }
             }
-          }
-        }`,
+          }`,
           {
             allParents: {
               nodes: [
@@ -299,17 +414,17 @@ describe.each([
         "Omits archived parents and children when NO",
         check(
           `{
-          allParents(include${Keyword}: NO) {
-            nodes {
-              id
-              childrenByParentId {
-                nodes {
-                  id
+            allParents(include${Keyword}: NO) {
+              nodes {
+                id
+                childrenByParentId {
+                  nodes {
+                    id
+                  }
                 }
               }
             }
-          }
-        }`,
+          }`,
           {
             allParents: {
               nodes: [
@@ -327,17 +442,17 @@ describe.each([
         "Includes all parents, and treats children as INHERIT (all children of an archived parent, but only the unarchived children of an unarchived parent) when YES",
         check(
           `{
-          allParents(include${Keyword}: YES) {
-            nodes {
-              id
-              childrenByParentId {
-                nodes {
-                  id
+            allParents(include${Keyword}: YES) {
+              nodes {
+                id
+                childrenByParentId {
+                  nodes {
+                    id
+                  }
                 }
               }
             }
-          }
-        }`,
+          }`,
           {
             allParents: {
               nodes: [
@@ -359,17 +474,17 @@ describe.each([
         "Includes only archived parents (and all their children) when EXCLUSIVELY",
         check(
           `{
-          allParents(include${Keyword}: EXCLUSIVELY) {
-            nodes {
-              id
-              childrenByParentId {
-                nodes {
-                  id
+            allParents(include${Keyword}: EXCLUSIVELY) {
+              nodes {
+                id
+                childrenByParentId {
+                  nodes {
+                    id
+                  }
                 }
               }
             }
-          }
-        }`,
+          }`,
           {
             allParents: {
               nodes: [
@@ -391,10 +506,10 @@ describe.each([
         "Omits archived parents by default",
         check(
           `{
-          allParentsList {
-            id
-          }
-        }`,
+            allParentsList {
+              id
+            }
+          }`,
           { allParentsList: iderize(1) },
         ),
       );
@@ -403,10 +518,10 @@ describe.each([
         "Omits archived parents when NO",
         check(
           `{
-          allParentsList(include${Keyword}: NO) {
-            id
-          }
-        }`,
+            allParentsList(include${Keyword}: NO) {
+              id
+            }
+          }`,
           { allParentsList: iderize(1) },
         ),
       );
@@ -415,10 +530,10 @@ describe.each([
         "Includes everything when YES",
         check(
           `{
-          allParentsList(include${Keyword}: YES) {
-            id
-          }
-        }`,
+            allParentsList(include${Keyword}: YES) {
+              id
+            }
+          }`,
           { allParentsList: iderize(1, 2) },
         ),
       );
@@ -427,65 +542,158 @@ describe.each([
         "Includes only archived when EXCLUSIVELY",
         check(
           `{
-          allParentsList(include${Keyword}: EXCLUSIVELY) {
-            id
-          }
-        }`,
+            allParentsList(include${Keyword}: EXCLUSIVELY) {
+              id
+            }
+          }`,
           { allParentsList: iderize(2) },
         ),
       );
     });
 
     describe("children", () => {
-      test(
-        "Omits archived children by default",
-        check(
-          `{
-          allChildrenList {
-            id
-          }
-        }`,
-          { allChildrenList: iderize(1001, 2001) },
-        ),
-      );
+      if (pgArchivedRelations) {
+        test(
+          "Omits archived children (and those with archived parents) by default",
+          check(
+            `{
+              allChildrenList {
+                id
+              }
+            }`,
+            { allChildrenList: iderize(1001) },
+          ),
+        );
+      } else {
+        test(
+          "Omits archived children by default",
+          check(
+            `{
+              allChildrenList {
+                id
+              }
+            }`,
+            { allChildrenList: iderize(1001, 2001) },
+          ),
+        );
+      }
 
-      test(
-        "Omits archived children when NO",
-        check(
-          `{
-          allChildrenList(include${Keyword}: NO) {
-            id
-          }
-        }`,
-          { allChildrenList: iderize(1001, 2001) },
-        ),
-      );
+      if (pgArchivedRelations) {
+        test(
+          "Omits archived children (and those with archived parents) when NO",
+          check(
+            `{
+              allChildrenList(include${Keyword}: NO) {
+                id
+              }
+            }`,
+            { allChildrenList: iderize(1001) },
+          ),
+        );
+      } else {
+        test(
+          "Omits archived children when NO",
+          check(
+            `{
+              allChildrenList(include${Keyword}: NO) {
+                id
+              }
+            }`,
+            { allChildrenList: iderize(1001, 2001) },
+          ),
+        );
+      }
 
-      test(
-        "Includes everything when YES",
-        check(
-          `{
-          allChildrenList(include${Keyword}: YES) {
-            id
-          }
-        }`,
-          {
-            allChildrenList: iderize(1001, 1002, 2001, 2002),
-          },
-        ),
-      );
+      if (pgArchivedRelations) {
+        test(
+          "Includes everything (except those with archived parents) when YES",
+          check(
+            `{
+              allChildrenList(include${Keyword}: YES) {
+                id
+              }
+            }`,
+            {
+              allChildrenList: iderize(1001, 1002),
+            },
+          ),
+        );
+        test(
+          "Includes everything when double YES",
+          check(
+            `{
+              allChildrenList(include${Keyword}: YES, includeWhenParentByParentId${Keyword}: YES) {
+                id
+              }
+            }`,
+            {
+              allChildrenList: iderize(1001, 1002, 2001, 2002),
+            },
+          ),
+        );
+      } else {
+        test(
+          "Includes everything when YES",
+          check(
+            `{
+              allChildrenList(include${Keyword}: YES) {
+                id
+              }
+            }`,
+            {
+              allChildrenList: iderize(1001, 1002, 2001, 2002),
+            },
+          ),
+        );
+      }
 
-      test(
-        "Includes only archived when EXCLUSIVELY",
-        check(
-          `{
-          allChildrenList(include${Keyword}: EXCLUSIVELY) {
-            id
-          }
-        }`,
-          { allChildrenList: iderize(1002, 2002) },
-        ),
-      );
+      if (pgArchivedRelations) {
+        test(
+          "Includes only archived (with non-archived parents) when EXCLUSIVELY",
+          check(
+            `{
+              allChildrenList(include${Keyword}: EXCLUSIVELY) {
+                id
+              }
+            }`,
+            { allChildrenList: iderize(1002) },
+          ),
+        );
+        test(
+          "Includes only archived (even those of archived parents) when YES/EXCLUSIVELY",
+          check(
+            `{
+              allChildrenList(include${Keyword}: EXCLUSIVELY, includeWhenParentByParentId${Keyword}: YES) {
+                id
+              }
+            }`,
+            { allChildrenList: iderize(1002, 2002) },
+          ),
+        );
+        test(
+          "Includes only archived of archived parents when EXCLUSIVELY/EXCLUSIVELY",
+          check(
+            `{
+              allChildrenList(include${Keyword}: EXCLUSIVELY, includeWhenParentByParentId${Keyword}: EXCLUSIVELY) {
+                id
+              }
+            }`,
+            { allChildrenList: iderize(2002) },
+          ),
+        );
+      } else {
+        test(
+          "Includes only archived when EXCLUSIVELY",
+          check(
+            `{
+              allChildrenList(include${Keyword}: EXCLUSIVELY) {
+                id
+              }
+            }`,
+            { allChildrenList: iderize(1002, 2002) },
+          ),
+        );
+      }
     });
 
     describe("children of parents", () => {
@@ -493,13 +701,13 @@ describe.each([
         "Omits archived parents and children by default",
         check(
           `{
-          allParentsList {
-            id
-            childrenByParentIdList {
+            allParentsList {
               id
+              childrenByParentIdList {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           {
             allParentsList: [
               {
@@ -515,13 +723,13 @@ describe.each([
         "Omits archived parents and children when NO",
         check(
           `{
-          allParentsList(include${Keyword}: NO) {
-            id
-            childrenByParentIdList {
+            allParentsList(include${Keyword}: NO) {
               id
+              childrenByParentIdList {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           {
             allParentsList: [
               {
@@ -537,13 +745,13 @@ describe.each([
         "Includes all parents, and treats children as INHERIT (all children of an archived parent, but only the unarchived children of an unarchived parent) when YES",
         check(
           `{
-          allParentsList(include${Keyword}: YES) {
-            id
-            childrenByParentIdList {
+            allParentsList(include${Keyword}: YES) {
               id
+              childrenByParentIdList {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           {
             allParentsList: [
               {
@@ -563,13 +771,13 @@ describe.each([
         "Includes only archived parents (and all their children) when EXCLUSIVELY",
         check(
           `{
-          allParentsList(include${Keyword}: EXCLUSIVELY) {
-            id
-            childrenByParentIdList {
+            allParentsList(include${Keyword}: EXCLUSIVELY) {
               id
+              childrenByParentIdList {
+                id
+              }
             }
-          }
-        }`,
+          }`,
           {
             allParentsList: [
               {
@@ -583,7 +791,6 @@ describe.each([
     });
   });
 
-  const pgRelationsAttr = `pg${Keyword}Relations`;
   if (graphileBuildOptions && graphileBuildOptions[pgRelationsAttr]) {
     describe(pgRelationsAttr, () => {
       it(
@@ -606,7 +813,7 @@ describe.each([
         check(
           /* GraphQL */ `
             {
-              allOtherChildrenList(include${Keyword}: NO) {
+              allOtherChildrenList(includeWhenParentByParentId${Keyword}: NO) {
                 id
               }
             }
@@ -621,7 +828,7 @@ describe.each([
         check(
           /* GraphQL */ `
             {
-              allOtherChildrenList(include${Keyword}: YES) {
+              allOtherChildrenList(includeWhenParentByParentId${Keyword}: YES) {
                 id
               }
             }
@@ -636,7 +843,7 @@ describe.each([
         check(
           /* GraphQL */ `
             {
-              allOtherChildrenList(include${Keyword}: EXCLUSIVELY) {
+              allOtherChildrenList(includeWhenParentByParentId${Keyword}: EXCLUSIVELY) {
                 id
               }
             }
@@ -675,7 +882,7 @@ describe.each([
             {
               allParentsList(include${Keyword}: YES) {
                 id
-                otherChildrenByParentIdList(include${Keyword}: INHERIT) {
+                otherChildrenByParentIdList(includeWhenParentByParentId${Keyword}: INHERIT) {
                   id
                 }
               }
@@ -696,7 +903,7 @@ describe.each([
             {
               allParentsList(include${Keyword}: YES) {
                 id
-                otherChildrenByParentIdList(include${Keyword}: YES) {
+                otherChildrenByParentIdList(includeWhenParentByParentId${Keyword}: YES) {
                   id
                 }
               }
@@ -717,7 +924,7 @@ describe.each([
             {
               allParentsList(include${Keyword}: YES) {
                 id
-                otherChildrenByParentIdList(include${Keyword}: NO) {
+                otherChildrenByParentIdList(includeWhenParentByParentId${Keyword}: NO) {
                   id
                 }
               }
@@ -738,7 +945,7 @@ describe.each([
             {
               allParentsList(include${Keyword}: YES) {
                 id
-                otherChildrenByParentIdList(include${Keyword}: EXCLUSIVELY) {
+                otherChildrenByParentIdList(includeWhenParentByParentId${Keyword}: EXCLUSIVELY) {
                   id
                 }
               }
@@ -760,7 +967,7 @@ describe.each([
         check(
           /* GraphQL */ `
             {
-              allOtherChildrenList(include${Keyword}: EXCLUSIVELY) {
+              allOtherChildrenList(includeWhenParentByParentId${Keyword}: EXCLUSIVELY) {
                 id
               }
             }
@@ -769,7 +976,7 @@ describe.each([
           (result) => {
             expect(result.errors).toHaveLength(1);
             expect(result.errors[0].message).toMatch(
-              `Unknown argument "include${Keyword}"`,
+              `Unknown argument "includeWhenParentByParentId${Keyword}"`,
             );
           },
         ),
