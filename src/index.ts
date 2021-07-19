@@ -9,6 +9,7 @@ import type { Build, Plugin as GraphileEnginePlugin } from "postgraphile";
 import type {
   PgAttribute,
   PgClass,
+  PgConstraint,
   PgIntrospectionResultsByKind,
   QueryBuilder,
   SQL,
@@ -80,19 +81,10 @@ const makeUtils = (
         return null;
       }
 
-      const relationPart = relevantRelation
-        ? inflection.singleRelationByKeys(
-            relevantRelation.keyAttributes,
-            relevantRelation.foreignClass,
-            table,
-            relevantRelation,
-          )
-        : null;
-
-      // TODO: replace with inflection call
-      const argumentName = relationPart
-        ? `includeWhen${inflection.upperCamelCase(relationPart)}${Keyword}`
-        : `include${Keyword}`;
+      const argumentName = inflection[`include${Keyword}Argument`](
+        table,
+        relevantRelation,
+      );
 
       const parentTableRelevantColumn = getRelevantColumn(parentTable);
       const capableOfInherit = allowInherit && !!parentTableRelevantColumn;
@@ -270,6 +262,37 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
     },
   }));
   */
+
+  const AddInflectorsPlugin: GraphileEnginePlugin = (builder) => {
+    builder.hook("inflection", (inflection, build) => {
+      return build.extend(
+        inflection,
+        {
+          [`include${Keyword}Argument`](
+            table: PgClass,
+            relation: PgConstraint,
+          ) {
+            const relationPart = relation
+              ? inflection.singleRelationByKeys(
+                  relation.keyAttributes,
+                  relation.foreignClass,
+                  table,
+                  relation,
+                )
+              : null;
+            const argumentName = relationPart
+              ? `includeWhen${inflection.upperCamelCase(
+                  relationPart,
+                )}${Keyword}`
+              : `include${Keyword}`;
+            return argumentName;
+          },
+        },
+        `Adding inflectors for '${keyword}' pg-omit-archived`,
+      );
+    });
+  };
+
   const AddToEnumPlugin: GraphileEnginePlugin = (builder) => {
     /* Had to move this to the build phase so that other plugins can use it */
     builder.hook("build", (build) => {
@@ -381,6 +404,7 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
   };
 
   const Plugin = makePluginByCombiningPlugins(
+    AddInflectorsPlugin,
     AddToEnumPlugin,
     PgOmitInnerPlugin,
   );
