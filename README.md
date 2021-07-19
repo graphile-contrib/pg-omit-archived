@@ -170,9 +170,10 @@ By default this plugin only adds the `include<Keyword>` (e.g. `includeArchived`)
 argument to collections for tables that have the relevant (e.g. `is_archived`)
 column. Sometimes however you want to expand this behaviour to tables that
 "belong to" this table. To achieve this, use the `pg<Keyword>Relations: true`
-(e.g. `pgArchivedRelations: true`) option. You should use this sparingly as it's
-not implemented particularly efficiently, and it also will make your schema
-somewhat larger/more complex.
+(e.g. `pgArchivedRelations: true`) option, and we'll add an argument like
+`includeWhen<Relation><Keyword>` (e.g. `includeWhenParentByParentIdArchived`).
+You should use this sparingly as it's not implemented particularly efficiently,
+and it also will make your schema somewhat larger/more complex.
 
 ## Behaviour
 
