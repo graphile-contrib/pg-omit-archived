@@ -365,7 +365,7 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
         const allUtils = selfAndConstraints.map((relation) =>
           makeUtils(build, keyword, table, parentTable, allowInherit, relation),
         );
-        if (!allUtils || allUtils.length === 0) {
+        if (!allUtils) {
           return args;
         }
         return allUtils.reduce((args, utils) => {
