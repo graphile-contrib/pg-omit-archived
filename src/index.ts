@@ -143,6 +143,7 @@ const makeUtils = (
     if (
       relevantRelation &&
       relevantColumn.class !== table &&
+      relevantRelation.foreignClass === parentTable &&
       capableOfInherit &&
       queryBuilder.parentQueryBuilder &&
       parentColumnDetails &&

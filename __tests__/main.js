@@ -1015,7 +1015,7 @@ comment on constraint fk_children_parents on omit_archived.children is E'@archiv
   }
 
   if (pgArchivedRelations || fk_children_parents) {
-    it.only(
+    it(
       "Only includes non-archived children when querying through a different relation",
       check(
         /* GraphQL */ `
