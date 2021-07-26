@@ -20,6 +20,14 @@ const {
 const SQL = `
 drop schema if exists omit_archived cascade;
 create schema omit_archived;
+create table omit_archived.organizations (
+  id int primary key,
+  name text,
+  is_archived boolean not null default false,
+  archived_at timestamptz default null,
+  is_published boolean not null default true,
+  published_at timestamptz default now()
+);
 create table omit_archived.parents (
   id int primary key,
   name text,
@@ -30,12 +38,14 @@ create table omit_archived.parents (
 );
 create table omit_archived.children (
   id int primary key,
-  parent_id int not null references omit_archived.parents,
+  organization_id int not null references omit_archived.organizations,
+  parent_id int not null,
   name text,
   is_archived boolean not null default false,
   archived_at timestamptz default null,
   is_published boolean not null default true,
-  published_at timestamptz default now()
+  published_at timestamptz default now(),
+  constraint fk_children_parents foreign key (parent_id) references omit_archived.parents
 );
 create index on omit_archived.children(parent_id);
 create table omit_archived.other_children (
@@ -43,13 +53,15 @@ create table omit_archived.other_children (
   parent_id int not null references omit_archived.parents,
   title text
 );
+insert into omit_archived.organizations (id, name, is_archived, archived_at, is_published, published_at)
+  values (3, 'GoodOrganization', false, null, true, now()), (4, 'BadOrganization', true, now(), false, null);
 insert into omit_archived.parents (id, name, is_archived, archived_at, is_published, published_at)
   values (1, 'First', false, null, true, now()), (2, 'Second', true, now(), false, null);
-insert into omit_archived.children (id, parent_id, name, is_archived, archived_at, is_published, published_at) values
-  (1001, 1, 'First child 1', false, null, true, now()),
-  (1002, 1, 'First child 2', true, now(), false, null),
-  (2001, 2, 'Second child 1', false, null, true, now()),
-  (2002, 2, 'Second child 2', true, now(), false, null);
+insert into omit_archived.children (id, organization_id, parent_id, name, is_archived, archived_at, is_published, published_at) values
+  (1001, 3, 1, 'First child 1', false, null, true, now()),
+  (1002, 3, 1, 'First child 2', true, now(), false, null),
+  (2001, 3, 2, 'Second child 1', false, null, true, now()),
+  (2002, 3, 2, 'Second child 2', true, now(), false, null);
 insert into omit_archived.other_children (id, parent_id, title) values
   (101, 1, 'First other child 1'),
   (102, 1, 'First other child 2'),
@@ -67,11 +79,18 @@ beforeAll(() => {
     connectionString: process.env.TEST_DATABASE_URL || "pggql_test",
   });
 });
-beforeAll(() => pgPool.query(SQL));
 afterAll(() => pgPool.end());
 
 describe.each([
   ["default"],
+  [
+    "default_w_comment",
+    undefined,
+    undefined,
+    {
+      fk_children_parents: true,
+    },
+  ],
   [
     "is_archived",
     "archived",
@@ -100,7 +119,8 @@ describe.each([
       pgDraftRelations: true,
     },
   ],
-])("%s", (_columnName, keyword, graphileBuildOptions) => {
+])("%s", (_columnName, keyword, graphileBuildOptions, config = {}) => {
+  const { fk_children_parents = null } = config;
   const Keyword = keyword
     ? keyword[0].toUpperCase() + keyword.slice(1)
     : `Archived`;
@@ -117,6 +137,16 @@ describe.each([
     ? graphileBuildOptions[pgRelationsAttr] || false
     : false;
   beforeAll(async () => {
+    // Reset database between each tes set
+    await pgPool.query(SQL);
+
+    // Load comments if needed
+    if (fk_children_parents) {
+      await pgPool.query(`\
+comment on constraint fk_children_parents on omit_archived.children is E'@archivedRelation';`);
+    }
+
+    // Build schema
     schema = await createPostGraphileSchema(pgPool, ["omit_archived"], options);
   });
 
@@ -209,7 +239,7 @@ describe.each([
     });
 
     describe("children", () => {
-      if (pgArchivedRelations) {
+      if (pgArchivedRelations || fk_children_parents) {
         test(
           "Omits archived children (and those with archived parents) by default",
           check(
@@ -239,7 +269,7 @@ describe.each([
         );
       }
 
-      if (pgArchivedRelations) {
+      if (pgArchivedRelations || fk_children_parents) {
         test(
           "Omits archived children (and those with archived parents) when NO",
           check(
@@ -269,7 +299,7 @@ describe.each([
         );
       }
 
-      if (pgArchivedRelations) {
+      if (pgArchivedRelations || fk_children_parents) {
         test(
           "Includes everything (except those with archived parents) when YES",
           check(
@@ -324,7 +354,7 @@ describe.each([
         );
       }
 
-      if (pgArchivedRelations) {
+      if (pgArchivedRelations || fk_children_parents) {
         test(
           "Includes only archived (with non-archived parents) when EXCLUSIVELY",
           check(
@@ -552,7 +582,7 @@ describe.each([
     });
 
     describe("children", () => {
-      if (pgArchivedRelations) {
+      if (pgArchivedRelations || fk_children_parents) {
         test(
           "Omits archived children (and those with archived parents) by default",
           check(
@@ -578,7 +608,7 @@ describe.each([
         );
       }
 
-      if (pgArchivedRelations) {
+      if (pgArchivedRelations || fk_children_parents) {
         test(
           "Omits archived children (and those with archived parents) when NO",
           check(
@@ -604,7 +634,7 @@ describe.each([
         );
       }
 
-      if (pgArchivedRelations) {
+      if (pgArchivedRelations || fk_children_parents) {
         test(
           "Includes everything (except those with archived parents) when YES",
           check(
@@ -647,7 +677,7 @@ describe.each([
         );
       }
 
-      if (pgArchivedRelations) {
+      if (pgArchivedRelations || fk_children_parents) {
         test(
           "Includes only archived (with non-archived parents) when EXCLUSIVELY",
           check(
@@ -791,7 +821,7 @@ describe.each([
     });
   });
 
-  if (graphileBuildOptions && graphileBuildOptions[pgRelationsAttr]) {
+  if (pgArchivedRelations) {
     describe(pgRelationsAttr, () => {
       it(
         "Defaults to omitting other_children where parent is archived",
@@ -939,7 +969,7 @@ describe.each([
         ),
       );
       it(
-        "Only ncludes archived other children within relation when explicitly EXCLUSIVELY",
+        "Only includes archived other children within relation when explicitly EXCLUSIVELY",
         check(
           /* GraphQL */ `
             {
@@ -982,5 +1012,31 @@ describe.each([
         ),
       );
     });
+  }
+
+  if (pgArchivedRelations || fk_children_parents) {
+    it(
+      "Only includes non-archived children when querying through a different relation",
+      check(
+        /* GraphQL */ `
+          {
+            organizationById(id: 3) {
+              id
+              childrenByOrganizationIdList(includeWhenParentByParentId${Keyword}: INHERIT) {
+                id
+              }
+            }
+          }
+        `,
+        {
+          organizationById: {
+            id: 3,
+            childrenByOrganizationIdList: iderize(
+              1001 /* 2001's parent is archived so should be excluded */,
+            ),
+          },
+        },
+      ),
+    );
   }
 });
