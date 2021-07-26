@@ -969,7 +969,7 @@ comment on constraint fk_children_parents on omit_archived.children is E'@archiv
         ),
       );
       it(
-        "Only ncludes archived other children within relation when explicitly EXCLUSIVELY",
+        "Only includes archived other children within relation when explicitly EXCLUSIVELY",
         check(
           /* GraphQL */ `
             {
