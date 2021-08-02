@@ -191,13 +191,13 @@ const makeUtils = (
             )} = ${myAlias}.${sql.identifier(otherAttr.name)}`;
           },
         );
-        const subquery = sql.fragment`(select ${fragment} from ${sql.identifier(
+        const subquery = sql.fragment`exists (select 1 from ${sql.identifier(
           relevantColumn.class.namespaceName,
           relevantColumn.class.name,
         )} as ${myAlias} where (${sql.join(
           relationConditions,
           ") and (",
-        )})) is true`;
+        )}) and (${fragment}))`;
         queryBuilder.where(subquery);
       } else {
         queryBuilder.where(fragment);
