@@ -148,7 +148,8 @@ const makeUtils = (
   const rawLocalDetails = expression
     ? appliesToTable(relevantClass)
       ? {
-          expression: expression,
+          expression: (_sql: typeof sql, tableAlias: SQL) =>
+            sql.fragment`(${expression(sql, tableAlias)})`,
           visibleFragment: booleanVisibleFragment,
           invisibleFragment: booleanInvisibleFragment,
         }
@@ -174,7 +175,8 @@ const makeUtils = (
   const parentDetails = appliesToTable(parentTable)
     ? expression
       ? {
-          expression: expression,
+          expression: (_sql: typeof sql, tableAlias: SQL) =>
+            sql.fragment`(${expression(sql, tableAlias)})`,
           visibleFragment: booleanVisibleFragment,
           invisibleFragment: booleanInvisibleFragment,
         }
