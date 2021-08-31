@@ -42,11 +42,41 @@ const makeUtils = (
       // `published_at`; false for `is_archived` or `archived_at`).
       [`pg${Keyword}ColumnImpliesVisible`]: invert = false,
       [`pg${Keyword}Relations`]: applyToRelations = false,
+      [`pg${Keyword}Expression`]: expression = null,
+      [`pg${Keyword}Tables`]: rawTables = null,
     },
   } = build;
   const sql = build.pgSql as typeof import("pg-sql2");
   const introspectionResultsByKind = build.pgIntrospectionResultsByKind as PgIntrospectionResultsByKind;
   const OptionType = getTypeByName(`Include${Keyword}Option`);
+
+  if (expression && build.options[`pg${Keyword}ColumnName`]) {
+    throw new Error(
+      `'pg${Keyword}Expression' cannot be combined with 'pg${Keyword}ColumnName'`,
+    );
+  }
+  if (expression && build.options[`pg${Keyword}ColumnImpliesVisible`]) {
+    throw new Error(
+      `'pg${Keyword}Expression' cannot be combined with 'pg${Keyword}ColumnImpliesVisible'`,
+    );
+  }
+  if (expression && !build.options[`pg${Keyword}Tables`]) {
+    throw new Error(
+      `'pg${Keyword}Expression' requires 'pg${Keyword}Tables' to be set to a list of the tables to which this expression can apply.`,
+    );
+  }
+
+  const tables = rawTables
+    ? (rawTables as string[]).map((t) => {
+        const [schemaOrTable, tableOnly, ...rest] = t.split(".");
+        if (rest.length) {
+          throw new Error("Could not parse ${t} into schema + table.");
+        }
+        return tableOnly
+          ? [schemaOrTable, tableOnly]
+          : ["public", schemaOrTable];
+      })
+    : null;
 
   const getRelevantColumn = (tableToCheck: PgClass) =>
     tableToCheck
@@ -56,6 +86,14 @@ const makeUtils = (
         )
       : null;
 
+  const _tableIsAllowed = (table: PgClass | null | undefined) =>
+    table != null &&
+    (tables == null ||
+      tables.some((t) => table.namespaceName === t[0] && table.name === t[1]));
+
+  const appliesToTable = (table: PgClass) =>
+    _tableIsAllowed(table) && (expression || getRelevantColumn(table));
+
   if (relevantRelation) {
     if (!applyToRelations && !relevantRelation.tags[`${keyword}Relation`]) {
       return null;
@@ -63,21 +101,21 @@ const makeUtils = (
     if (
       !relevantRelation.foreignClass ||
       relevantRelation.classId !== table.id ||
-      !getRelevantColumn(relevantRelation.foreignClass)
+      !appliesToTable(relevantRelation.foreignClass)
     ) {
       return null;
     }
   }
 
-  const relevantColumn = relevantRelation
-    ? relevantRelation.foreignClass
-      ? getRelevantColumn(relevantRelation.foreignClass)
-      : null
-    : getRelevantColumn(table);
+  const relevantClass = relevantRelation
+    ? (relevantRelation.foreignClass as PgClass | never)
+    : table;
 
-  if (!relevantColumn) {
+  if (!relevantClass) {
     return null;
   }
+
+  const relevantColumn = getRelevantColumn(relevantClass);
 
   const argumentName = inflection[`include${Keyword}Argument`](
     table,
@@ -85,23 +123,11 @@ const makeUtils = (
   );
 
   const parentTableRelevantColumn = getRelevantColumn(parentTable);
-  const capableOfInherit = allowInherit && !!parentTableRelevantColumn;
-  const pgRelevantColumnIsBoolean = relevantColumn.type.category === "B";
+  const capableOfInherit = allowInherit && appliesToTable(parentTable);
+  const pgRelevantColumnIsBoolean = relevantColumn?.type.category === "B";
   const pgParentRelevantColumnIsBoolean =
     parentTableRelevantColumn &&
     parentTableRelevantColumn.type.category === "B";
-
-  const columnDetails = {
-    isBoolean: pgRelevantColumnIsBoolean,
-    name: relevantColumn.name,
-  };
-  const parentColumnDetails = parentTableRelevantColumn
-    ? {
-        isBoolean: pgParentRelevantColumnIsBoolean,
-        canInherit: capableOfInherit,
-        name: parentTableRelevantColumn.name,
-      }
-    : null;
 
   const booleanVisibleFragment = invert
     ? sql.fragment`true`
@@ -119,34 +145,72 @@ const makeUtils = (
     ? sql.fragment`null`
     : sql.fragment`not null`;
 
-  const [visibleFragment, invisibleFragment] = columnDetails.isBoolean
-    ? [booleanVisibleFragment, booleanInvisibleFragment]
-    : [nullableVisibleFragment, nullableInvisibleFragment];
+  const rawLocalDetails = expression
+    ? appliesToTable(relevantClass)
+      ? {
+          expression: (_sql: typeof sql, tableAlias: SQL) =>
+            sql.fragment`(${expression(sql, tableAlias)})`,
+          visibleFragment: booleanVisibleFragment,
+          invisibleFragment: booleanInvisibleFragment,
+        }
+      : null
+    : relevantColumn
+    ? {
+        expression: (_sql: typeof sql, tableAlias: SQL) =>
+          sql.fragment`${tableAlias}.${sql.identifier(relevantColumn.name)}`,
+        visibleFragment: pgRelevantColumnIsBoolean
+          ? booleanVisibleFragment
+          : nullableVisibleFragment,
+        invisibleFragment: pgRelevantColumnIsBoolean
+          ? booleanInvisibleFragment
+          : nullableInvisibleFragment,
+      }
+    : null;
 
-  const [_parentVisibleFragment, parentInvisibleFragment] =
-    parentColumnDetails && parentColumnDetails.isBoolean
-      ? [booleanVisibleFragment, booleanInvisibleFragment]
-      : [nullableVisibleFragment, nullableInvisibleFragment];
+  if (!rawLocalDetails) {
+    return null;
+  }
+  const localDetails = rawLocalDetails;
+
+  const parentDetails = appliesToTable(parentTable)
+    ? expression
+      ? {
+          expression: (_sql: typeof sql, tableAlias: SQL) =>
+            sql.fragment`(${expression(sql, tableAlias)})`,
+          visibleFragment: booleanVisibleFragment,
+          invisibleFragment: booleanInvisibleFragment,
+        }
+      : parentTableRelevantColumn
+      ? {
+          expression: (_sql: typeof sql, tableAlias: SQL) =>
+            sql.fragment`${tableAlias}.${sql.identifier(
+              parentTableRelevantColumn.name,
+            )}`,
+          visibleFragment: pgParentRelevantColumnIsBoolean
+            ? booleanVisibleFragment
+            : nullableVisibleFragment,
+          invisibleFragment: pgParentRelevantColumnIsBoolean
+            ? booleanInvisibleFragment
+            : nullableInvisibleFragment,
+        }
+      : null
+    : null;
 
   function addWhereClause(queryBuilder: QueryBuilder, fieldArgs: any) {
-    // TypeScript hack
-    if (!relevantColumn) {
-      return;
-    }
     const { [argumentName]: relevantSetting } = fieldArgs;
     let fragment: SQL | null = null;
 
     const myAlias =
-      relevantColumn.class !== table
+      relevantClass !== table
         ? sql.identifier(Symbol("me"))
         : queryBuilder.getTableAlias();
     if (
       relevantRelation &&
-      relevantColumn.class !== table &&
+      relevantClass !== table &&
       relevantRelation.foreignClass === parentTable &&
       capableOfInherit &&
       queryBuilder.parentQueryBuilder &&
-      parentColumnDetails &&
+      parentDetails &&
       ["INHERIT", "YES"].includes(relevantSetting)
     ) {
       // In this case the work is already done by the parent record and it
@@ -159,29 +223,31 @@ const makeUtils = (
       capableOfInherit &&
       relevantSetting === "INHERIT" &&
       queryBuilder.parentQueryBuilder &&
-      parentColumnDetails
+      parentDetails
     ) {
       const sqlParentTableAlias = queryBuilder.parentQueryBuilder.getTableAlias();
-      fragment = sql.fragment`(${sqlParentTableAlias}.${sql.identifier(
-        parentColumnDetails.name,
-      )} is ${parentInvisibleFragment} or ${myAlias}.${sql.identifier(
-        columnDetails.name,
-      )} is ${visibleFragment})`;
+      fragment = sql.fragment`(${parentDetails.expression(
+        sql,
+        sqlParentTableAlias,
+      )} is ${parentDetails.invisibleFragment} or ${localDetails.expression(
+        sql,
+        myAlias,
+      )} is ${localDetails.visibleFragment})`;
     } else if (
       relevantSetting === "NO" ||
       // INHERIT is equivalent to NO if there's no valid parent
       relevantSetting === "INHERIT"
     ) {
-      fragment = sql.fragment`${myAlias}.${sql.identifier(
-        columnDetails.name,
-      )} is ${visibleFragment}`;
+      fragment = sql.fragment`${localDetails.expression(sql, myAlias)} is ${
+        localDetails.visibleFragment
+      }`;
     } else if (relevantSetting === "EXCLUSIVELY") {
-      fragment = sql.fragment`${myAlias}.${sql.identifier(
-        columnDetails.name,
-      )} is ${invisibleFragment}`;
+      fragment = sql.fragment`${localDetails.expression(sql, myAlias)} is ${
+        localDetails.invisibleFragment
+      }`;
     }
     if (fragment) {
-      if (relevantRelation && relevantColumn.class !== table) {
+      if (relevantRelation && relevantClass !== table) {
         const localAlias = queryBuilder.getTableAlias();
         const relationConditions = relevantRelation.keyAttributes.map(
           (attr, i) => {
@@ -192,8 +258,8 @@ const makeUtils = (
           },
         );
         const subquery = sql.fragment`exists (select 1 from ${sql.identifier(
-          relevantColumn.class.namespaceName,
-          relevantColumn.class.name,
+          relevantClass.namespaceName,
+          relevantClass.name,
         )} as ${myAlias} where (${sql.join(
           relationConditions,
           ") and (",

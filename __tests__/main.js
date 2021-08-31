@@ -26,7 +26,8 @@ create table omit_archived.organizations (
   is_archived boolean not null default false,
   archived_at timestamptz default null,
   is_published boolean not null default true,
-  published_at timestamptz default now()
+  published_at timestamptz default now(),
+  status text not null
 );
 create table omit_archived.parents (
   id int primary key,
@@ -34,7 +35,8 @@ create table omit_archived.parents (
   is_archived boolean not null default false,
   archived_at timestamptz default null,
   is_published boolean not null default true,
-  published_at timestamptz default now()
+  published_at timestamptz default now(),
+  status text not null
 );
 create table omit_archived.children (
   id int primary key,
@@ -45,6 +47,7 @@ create table omit_archived.children (
   archived_at timestamptz default null,
   is_published boolean not null default true,
   published_at timestamptz default now(),
+  status text not null,
   constraint fk_children_parents foreign key (parent_id) references omit_archived.parents
 );
 create index on omit_archived.children(parent_id);
@@ -53,15 +56,15 @@ create table omit_archived.other_children (
   parent_id int not null references omit_archived.parents,
   title text
 );
-insert into omit_archived.organizations (id, name, is_archived, archived_at, is_published, published_at)
-  values (3, 'GoodOrganization', false, null, true, now()), (4, 'BadOrganization', true, now(), false, null);
-insert into omit_archived.parents (id, name, is_archived, archived_at, is_published, published_at)
-  values (1, 'First', false, null, true, now()), (2, 'Second', true, now(), false, null);
-insert into omit_archived.children (id, organization_id, parent_id, name, is_archived, archived_at, is_published, published_at) values
-  (1001, 3, 1, 'First child 1', false, null, true, now()),
-  (1002, 3, 1, 'First child 2', true, now(), false, null),
-  (2001, 3, 2, 'Second child 1', false, null, true, now()),
-  (2002, 3, 2, 'Second child 2', true, now(), false, null);
+insert into omit_archived.organizations (id, name, is_archived, archived_at, is_published, published_at, status)
+  values (3, 'GoodOrganization', false, null, true, now(), 'published'), (4, 'BadOrganization', true, now(), false, null, 'archived');
+insert into omit_archived.parents (id, name, is_archived, archived_at, is_published, published_at, status)
+  values (1, 'First', false, null, true, now(), 'published'), (2, 'Second', true, now(), false, null, 'archived');
+insert into omit_archived.children (id, organization_id, parent_id, name, is_archived, archived_at, is_published, published_at, status) values
+  (1001, 3, 1, 'First child 1', false, null, true, now(), 'published'),
+  (1002, 3, 1, 'First child 2', true, now(), false, null, 'archived'),
+  (2001, 3, 2, 'Second child 1', false, null, true, now(), 'published'),
+  (2002, 3, 2, 'Second child 2', true, now(), false, null, 'archived');
 insert into omit_archived.other_children (id, parent_id, title) values
   (101, 1, 'First other child 1'),
   (102, 1, 'First other child 2'),
@@ -117,6 +120,20 @@ describe.each([
       pgDraftColumnName: "published_at",
       pgDraftColumnImpliesVisible: true,
       pgDraftRelations: true,
+    },
+  ],
+  [
+    "status",
+    "statusArchived",
+    {
+      pgStatusArchivedTables: [
+        "omit_archived.organizations",
+        "omit_archived.parents",
+        "omit_archived.children",
+      ],
+      pgStatusArchivedExpression: (sql, tableAlias) =>
+        sql.fragment`${tableAlias}.status = 'archived'`,
+      pgStatusArchivedRelations: true,
     },
   ],
 ])("%s", (_columnName, keyword, graphileBuildOptions, config = {}) => {

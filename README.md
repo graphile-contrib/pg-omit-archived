@@ -45,9 +45,12 @@ postgraphile --append-plugins @graphile-contrib/pg-omit-archived -c postgres:///
 
 ### Usage - Library
 
+**IMPORTANT**: if a nullable or boolean column is not suitable for your needs,
+please see the section on expressions below.
+
 If you're using PostGraphile in library (middleware) mode then you have more
 configuration options and you can specify a column that's _either_ boolean _or_
-nullable; a nullable timestamptz column is a popular choice:
+nullable. A nullable timestamptz column is a popular choice:
 
 ```sql
 alter table my_table add column archived_at timestamptz;
@@ -176,6 +179,42 @@ relevant foreign key constraint), and we'll add an argument like
 `includeWhen<Relation><Keyword>` (e.g. `includeWhenParentByParentIdArchived`).
 You should use this sparingly as it's not implemented particularly efficiently,
 and it also will make your schema somewhat larger/more complex.
+
+### Usage - advanced expressions
+
+If a boolean or nullable column is not sufficient for your needs then since
+v3.0.0 you can use an expression instead. This allows you to write queries such
+as `my_table.status = 'archived'` or
+`my_table.archived_at is not null or my_table.deleted_at is not null or my_table.published_at is null`
+or even `my_computed_column(my_table) is true` (but be careful with that one;
+performance would likely be poor!).
+
+To use this, instead of setting `pgArchivedColumnName` you can specify both:
+
+- `pgArchivedExpression` (or `pg<Keyword>Expression`): a function that accepts
+  `sql` and `tableAlias` and returns a
+  [pg-sql2 fragment](https://github.com/graphile/graphile-engine/tree/9d6c29e3505844ca64020fb6850093a7678a0fa4/packages/pg-sql2#sqlquery)
+  that should resolve to a boolean indicating that the row should be omitted
+- `pgArchivedTables` (or `pg<Keyword>Tables`): an array of tables that this
+  expression applies to (since we can't determine this automatically)
+
+```ts
+app.use(
+  postgraphile(process.env.DATABASE_URL, "app_public", {
+    appendPlugins: [customPgOmitArchived("archived")],
+    graphileBuildOptions: {
+      /* 👇👇👇 */
+      // What tables does the expression apply to?
+      pgArchivedTables: ["my_schema.my_table"],
+
+      // SQL expression that returns true if the row should be omitted
+      pgArchivedExpression: (sql, tableAlias) =>
+        sql.fragment`${tableAlias}.status = 'archived'`,
+      /* ☝️☝️☝️ */
+    },
+  }),
+);
+```
 
 ## Behaviour
 
