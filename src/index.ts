@@ -125,7 +125,7 @@ const makeUtils = (
   const parentTableRelevantColumn = getRelevantColumn(parentTable);
   const capableOfInherit = allowInherit && appliesToTable(parentTable);
   const pgRelevantColumnIsBoolean = relevantColumn?.type.category === "B";
-  const pgParentTableRelevantColumnIsBoolean =
+  const pgParentRelevantColumnIsBoolean =
     parentTableRelevantColumn &&
     parentTableRelevantColumn.type.category === "B";
 
@@ -186,10 +186,10 @@ const makeUtils = (
             sql.fragment`${tableAlias}.${sql.identifier(
               parentTableRelevantColumn.name,
             )}`,
-          visibleFragment: pgParentTableRelevantColumnIsBoolean
+          visibleFragment: pgParentRelevantColumnIsBoolean
             ? booleanVisibleFragment
             : nullableVisibleFragment,
-          invisibleFragment: pgParentTableRelevantColumnIsBoolean
+          invisibleFragment: pgParentRelevantColumnIsBoolean
             ? booleanInvisibleFragment
             : nullableInvisibleFragment,
         }
