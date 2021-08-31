@@ -126,13 +126,13 @@ describe.each([
     "status",
     "statusArchived",
     {
-      pgStatusArchivedAppliesTo: [
+      pgStatusArchivedTables: [
         "omit_archived.organizations",
         "omit_archived.parents",
         "omit_archived.children",
       ],
       pgStatusArchivedExpression: (sql, tableAlias) =>
-        sql.fragment`${tableAlias}.status != 'archived'`,
+        sql.fragment`${tableAlias}.status = 'archived'`,
       pgStatusArchivedRelations: true,
     },
   ],
