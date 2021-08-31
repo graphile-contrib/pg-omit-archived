@@ -150,6 +150,10 @@ comment on constraint fk_children_parents on omit_archived.children is E'@archiv
     schema = await createPostGraphileSchema(pgPool, ["omit_archived"], options);
   });
 
+  it("schema matches snapshot", () => {
+    expect(schema).toMatchSnapshot();
+  });
+
   function check(query, expected, checker) {
     const rootValue = null;
     const variables = {};

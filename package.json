@@ -31,6 +31,7 @@
     "graphile-build-pg": "^4.5.5",
     "graphql": "14.x",
     "jest": "^24.9.0",
+    "jest-serializer-graphql-schema": "^4.10.0",
     "pg": "8.x",
     "postgraphile": "^4.5.5",
     "prettier": "^2.2.1",
@@ -43,5 +44,8 @@
   "prettier": {
     "trailingComma": "all",
     "proseWrap": "always"
+  },
+  "jest": {
+    "snapshotSerializers": ["jest-serializer-graphql-schema"]
   }
 }

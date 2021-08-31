@@ -2135,6 +2135,13 @@ jest-runtime@^24.9.0:
     strip-bom "^3.0.0"
     yargs "^13.3.0"
 
+jest-serializer-graphql-schema@^4.10.0:
+  version "4.10.0"
+  resolved "https://registry.yarnpkg.com/jest-serializer-graphql-schema/-/jest-serializer-graphql-schema-4.10.0.tgz#debff8b58e8adc00e581eadf885e9a2e4619ab66"
+  integrity sha512-qBeF42OWaqTHYwSfnlfvmFB63VBy8PCmx1w1Mslgbv6fWleHSjAakIvIXJpiHcsKNWSLJArQ4wUYXko8qZzgSg==
+  dependencies:
+    tslib "^2.0.1"
+
 jest-serializer@^24.9.0:
   version "24.9.0"
   resolved "https://registry.yarnpkg.com/jest-serializer/-/jest-serializer-24.9.0.tgz#e6d7d7ef96d31e8b9079a714754c5d5c58288e73"
