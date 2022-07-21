@@ -68,6 +68,9 @@ you'd set `pgArchivedColumnImpliesVisible: true` rather than the default
 Another option is to have the plugin apply to related records with the
 `pgArchivedRelations: true` option - more on this below.
 
+You can also change the default for `includeArchived` from `NO` to `YES` via
+`pgArchivedDefaultInclude: "YES"` (another option is `EXCLUSIVELY`).
+
 Example:
 
 ```js
@@ -87,6 +90,7 @@ app.use(
       pgArchivedColumnName: "is_archived",
       pgArchivedColumnImpliesVisible: false,
       pgArchivedRelations: false,
+      pgArchivedDefault: "NO",
     },
     /* ☝️☝️☝️ */
   }),
@@ -126,6 +130,8 @@ app.use(
       pgArchivedColumnImpliesVisible: false,
       // Only add includeArchived to tables with is_archived column:
       pgArchivedRelations: false,
+      // Exclude archived by default
+      pgArchivedDefault: "NO",
 
       /* -------- Options for 'deleted' -------- */
       // Non-boolean column -> checked as "IS NULL":
@@ -136,6 +142,8 @@ app.use(
 
       /* -------- Options for 'template' -------- */
       pgTemplateColumnName: "is_template",
+      // Include templates by default
+      pgTemplateDefault: "YES",
 
       /* -------- Options for 'draft' -------- */
       // Column name doesn't have to match keyword name:
