@@ -66,6 +66,8 @@ const makeUtils = (
     );
   }
 
+  const defaultValue = build.options[`pg${Keyword}Default`] || "NO";
+
   const tables = rawTables
     ? (rawTables as string[]).map((t) => {
         const [schemaOrTable, tableOnly, ...rest] = t.split(".");
@@ -219,6 +221,13 @@ const makeUtils = (
       // any extra WHERE clauses.
       return;
     }
+    // INHERIT is equivalent to defaultValue if there's no valid parent
+    const relevantSettingIfNotInherit =
+      relevantSetting !== "INHERIT"
+        ? relevantSetting
+        : defaultValue !== "INHERIT"
+        ? defaultValue
+        : "NO";
     if (
       capableOfInherit &&
       relevantSetting === "INHERIT" &&
@@ -233,15 +242,11 @@ const makeUtils = (
         sql,
         myAlias,
       )} is ${localDetails.visibleFragment})`;
-    } else if (
-      relevantSetting === "NO" ||
-      // INHERIT is equivalent to NO if there's no valid parent
-      relevantSetting === "INHERIT"
-    ) {
+    } else if (relevantSettingIfNotInherit === "NO") {
       fragment = sql.fragment`${localDetails.expression(sql, myAlias)} is ${
         localDetails.visibleFragment
       }`;
-    } else if (relevantSetting === "EXCLUSIVELY") {
+    } else if (relevantSettingIfNotInherit === "EXCLUSIVELY") {
       fragment = sql.fragment`${localDetails.expression(sql, myAlias)} is ${
         localDetails.invisibleFragment
       }`;
@@ -362,6 +367,7 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
       const {
         graphql: { GraphQLEnumType },
       } = build;
+      const defaultValue = build.options[`pg${Keyword}Default`] || "NO";
       build.newWithHooks(
         GraphQLEnumType,
         {
@@ -381,7 +387,9 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
               value: "EXCLUSIVELY",
             },
             INHERIT: {
-              description: `If there is a parent GraphQL record and it is ${keyword} then this is equivalent to YES, in all other cases this is equivalent to NO.`,
+              description: `If there is a parent GraphQL record and it is ${keyword} then this is equivalent to YES, in all other cases this is equivalent to ${
+                defaultValue === "INHERIT" ? "NO" : defaultValue
+              }.`,
               value: "INHERIT",
             },
           },
