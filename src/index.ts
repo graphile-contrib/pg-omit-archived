@@ -422,7 +422,7 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
         } = context;
         const defaultValue = build.options[`pg${Keyword}Default`] || "NO";
         const defaultInherit =
-          build.options[`pg${Keyword}DefaultInherit`] || true;
+          build.options[`pg${Keyword}DefaultInherit`] !== false;
         const table: PgClass = pgFieldIntrospection;
         if (
           !(isPgFieldConnection || isPgFieldSimpleCollection) ||
