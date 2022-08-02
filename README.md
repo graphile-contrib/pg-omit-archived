@@ -68,8 +68,13 @@ you'd set `pgArchivedColumnImpliesVisible: true` rather than the default
 Another option is to have the plugin apply to related records with the
 `pgArchivedRelations: true` option - more on this below.
 
-You can also change the default for `includeArchived` from `NO` to `YES` via
-`pgArchivedDefaultInclude: "YES"` (another option is `EXCLUSIVELY`).
+When the plugin detects that inheritance is possible, the default for the
+argument will be set to `INHERIT`; to disable this behavior, use
+`pgArchivedDefaultInherit: false`.
+
+When the default is not `INHERIT` you can also change the default for
+`includeArchived` from `NO` to `YES` via `pgArchivedDefault: "YES"` (another
+option is `EXCLUSIVELY`).
 
 Example:
 
@@ -90,6 +95,7 @@ app.use(
       pgArchivedColumnName: "is_archived",
       pgArchivedColumnImpliesVisible: false,
       pgArchivedRelations: false,
+      pgArchivedDefaultInherit: true,
       pgArchivedDefault: "NO",
     },
     /* ☝️☝️☝️ */
@@ -144,6 +150,8 @@ app.use(
       pgTemplateColumnName: "is_template",
       // Include templates by default
       pgTemplateDefault: "YES",
+      // Don't default to INHERIT even if we could
+      pgTemplateDefaultInherit: false,
 
       /* -------- Options for 'draft' -------- */
       // Column name doesn't have to match keyword name:

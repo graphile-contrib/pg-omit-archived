@@ -421,6 +421,8 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
           field,
         } = context;
         const defaultValue = build.options[`pg${Keyword}Default`] || "NO";
+        const defaultInherit =
+          build.options[`pg${Keyword}DefaultInherit`] || true;
         const table: PgClass = pgFieldIntrospection;
         if (
           !(isPgFieldConnection || isPgFieldSimpleCollection) ||
@@ -471,7 +473,8 @@ const generator = (keyword = "archived"): GraphileEnginePlugin => {
               [argumentName]: {
                 description: `Indicates whether ${keyword} items should be included in the results or not.`,
                 type: OptionType,
-                defaultValue: capableOfInherit ? "INHERIT" : defaultValue,
+                defaultValue:
+                  capableOfInherit && defaultInherit ? "INHERIT" : defaultValue,
               },
             },
             `Adding ${argumentName} argument to connection field '${field.name}' of '${Self.name}'`,
