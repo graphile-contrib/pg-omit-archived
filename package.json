@@ -1,6 +1,6 @@
 {
   "name": "@graphile-contrib/pg-omit-archived",
-  "version": "3.2.1",
+  "version": "4.0.0-alpha.0",
   "description": "Makes collections omit archived items by default, but gives the ability to view archived items if explicitly requested.",
   "main": "dist/index.js",
   "scripts": {
@@ -20,20 +20,20 @@
   "author": "Benjie Gillam <code@benjiegillam.com>",
   "license": "MIT",
   "dependencies": {
-    "graphile-utils": "^4.5.6"
+    "graphile-utils": "^5.0.0-alpha.0"
   },
   "peerDependencies": {
-    "graphile-build-pg": "^4.5.5",
-    "postgraphile": "^4.5.5"
+    "graphile-build-pg": "^5.0.0-alpha.0",
+    "postgraphile": "^5.0.0-alpha.0"
   },
   "devDependencies": {
     "@tsconfig/node16": "^1.0.0",
-    "graphile-build-pg": "^4.5.5",
-    "graphql": "14.x",
+    "graphile-build-pg": "^5.0.0-alpha.0",
+    "graphql": "16.x",
     "jest": "^28.1.3",
     "jest-serializer-graphql-schema": "^5.0.0-alpha.0",
     "pg": "8.x",
-    "postgraphile": "^4.5.5",
+    "postgraphile": "^5.0.0-alpha.0",
     "prettier": "^2.2.1",
     "typescript": "^5.0.0"
   },
