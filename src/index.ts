@@ -473,8 +473,10 @@ const generator = (keyword = "archived"): GraphileConfig.Plugin => {
               isPgFieldConnection,
               isPgFieldSimpleCollection,
               pgRelationDetails,
-              pgCodec,
-              pgFieldCodec,
+              pgCodec: rawPgCodec,
+              pgTypeResource,
+              pgFieldCodec: rawPgFieldCodec,
+              pgFieldResource,
               //pgFieldIntrospection,
               // pgIntrospection: parentTable,
               [`include${Keyword}` as "includeArchived"]: includeArchived,
@@ -482,6 +484,9 @@ const generator = (keyword = "archived"): GraphileConfig.Plugin => {
             },
             Self,
           } = context;
+          const pgFieldCodec = rawPgFieldCodec ?? pgFieldResource?.codec;
+          const pgCodec = rawPgCodec ?? pgTypeResource?.codec;
+          const interesting = fieldName === "allParentsList";
           const relation = pgRelationDetails
             ? pgRelationDetails.registry.pgRelations[
                 pgRelationDetails.codec.name
