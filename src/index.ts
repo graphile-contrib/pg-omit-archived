@@ -508,10 +508,13 @@ const generator = (keyword = "archived"): GraphileConfig.Plugin => {
             return args;
           }
           const allowInherit = isPgBackwardRelationField;
-          const relationsLookup =
-            build.input.pgRegistry.pgRelations[pgFieldCodec.name];
+          const relationsLookup = build.input.pgRegistry.pgRelations[
+            pgFieldCodec.name
+          ] as Record<string, PgCodecRelation>;
           const relationNames = relationsLookup
-            ? (Object.keys(relationsLookup) as string[])
+            ? (Object.entries(relationsLookup)
+                .filter(([, relation]) => !relation.isReferencee)
+                .map(([name]) => name) as string[])
             : [];
           const selfAndRelationNames = [null, ...relationNames];
           const allUtils = selfAndRelationNames.map((relationName) =>
