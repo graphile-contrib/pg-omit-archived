@@ -46,6 +46,9 @@
     "proseWrap": "always"
   },
   "jest": {
+    "testMatch": [
+      "**/__tests__/*.test.[jt]s"
+    ],
     "snapshotSerializers": [
       "jest-serializer-graphql-schema"
     ]
