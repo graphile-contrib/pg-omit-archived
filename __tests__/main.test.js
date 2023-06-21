@@ -1,4 +1,4 @@
-const { graphql } = require("graphql");
+const { graphql, lexicographicSortSchema } = require("graphql");
 const pg = require("pg");
 const {
   createPostGraphileSchema,
@@ -168,7 +168,7 @@ comment on constraint fk_children_parents on omit_archived.children is E'@archiv
   });
 
   it("schema matches snapshot", () => {
-    expect(schema).toMatchSnapshot();
+    expect(lexicographicSortSchema(schema)).toMatchSnapshot();
   });
 
   function check(query, expected, checker) {
