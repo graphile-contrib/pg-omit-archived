@@ -16,6 +16,72 @@ import type {
 } from "@dataplan/pg";
 import { TYPES, PgSelectSingleStep } from "@dataplan/pg";
 
+declare global {
+  namespace GraphileBuild {
+    interface Inflection {
+      // If you use other keywords, you will need to declaration merge your own inflectors for TypeScript.
+      includeArchivedArgument(
+        this: Inflection,
+        details: {
+          codec: PgCodecWithAttributes;
+          registry: PgRegistry;
+          relationName?: string;
+        },
+      ): string;
+    }
+    interface SchemaOptions {
+      /**
+       * The name of the column to use to determine if the record is archived
+       * or not. Defaults to 'is_archived'
+       */
+      pgArchivedColumnName?: string;
+      /**
+       * Set this true to invert the column logic - i.e. if your column is
+       * `is_visible` instead of `is_archived`.
+       */
+      pgArchivedColumnImpliesVisible?: boolean;
+      /**
+       * If your determination of whether a record is archived or not is more complex
+       * than checking if a column is not null/not false then you can define an SQL
+       * expression instead.
+       */
+      pgArchivedExpression?: (sql: PgSQL, tableAlias: SQL) => SQL;
+      /**
+       * The default option to use for the 'includeArchived' argument. Defaults
+       * to 'NO', but will be replaced with 'INHERIT' where possible unless you set
+       * `pgArchivedDefaultInherit` to false.
+       */
+      pgArchivedDefault?: "INHERIT" | "NO" | "YES" | "EXCLUSIVELY";
+      /**
+       * Set false if you don't want the system to default to 'INHERIT' if it's
+       * able to do so.
+       */
+      pgArchivedDefaultInherit?: boolean;
+      /**
+       * Set true if you want related record collections to have the
+       * pg-omit-archived behavior if they belong to a table that explicitly
+       * matches.
+       */
+      pgArchivedRelations?: boolean;
+      /**
+       * If you want the system to apply the archived filter to a specific list of tables, list their names here:
+       */
+      pgArchivedTables?: string[];
+    }
+    interface ScopeObjectFieldsFieldArgs {
+      /**
+       * Set true if child fields should always include archived entries.
+       */
+      includeArchived?: boolean;
+    }
+  }
+}
+declare module "graphile-build-pg" {
+  interface PgCodecRelationTags {
+    archivedRelation?: boolean;
+  }
+}
+
 /**
  * Build utils
  *
@@ -327,72 +393,6 @@ const makeUtils = (
     argumentName,
   };
 };
-
-declare global {
-  namespace GraphileBuild {
-    interface Inflection {
-      // If you use other keywords, you will need to declaration merge your own inflectors for TypeScript.
-      includeArchivedArgument(
-        this: Inflection,
-        details: {
-          codec: PgCodecWithAttributes;
-          registry: PgRegistry;
-          relationName?: string;
-        },
-      ): string;
-    }
-    interface SchemaOptions {
-      /**
-       * The name of the column to use to determine if the record is archived
-       * or not. Defaults to 'is_archived'
-       */
-      pgArchivedColumnName?: string;
-      /**
-       * Set this true to invert the column logic - i.e. if your column is
-       * `is_visible` instead of `is_archived`.
-       */
-      pgArchivedColumnImpliesVisible?: boolean;
-      /**
-       * If your determination of whether a record is archived or not is more complex
-       * than checking if a column is not null/not false then you can define an SQL
-       * expression instead.
-       */
-      pgArchivedExpression?: (sql: PgSQL, tableAlias: SQL) => SQL;
-      /**
-       * The default option to use for the 'includeArchived' argument. Defaults
-       * to 'NO', but will be replaced with 'INHERIT' where possible unless you set
-       * `pgArchivedDefaultInherit` to false.
-       */
-      pgArchivedDefault?: "INHERIT" | "NO" | "YES" | "EXCLUSIVELY";
-      /**
-       * Set false if you don't want the system to default to 'INHERIT' if it's
-       * able to do so.
-       */
-      pgArchivedDefaultInherit?: boolean;
-      /**
-       * Set true if you want related record collections to have the
-       * pg-omit-archived behavior if they belong to a table that explicitly
-       * matches.
-       */
-      pgArchivedRelations?: boolean;
-      /**
-       * If you want the system to apply the archived filter to a specific list of tables, list their names here:
-       */
-      pgArchivedTables?: string[];
-    }
-    interface ScopeObjectFieldsFieldArgs {
-      /**
-       * Set true if child fields should always include archived entries.
-       */
-      includeArchived?: boolean;
-    }
-  }
-}
-declare module "graphile-build-pg" {
-  interface PgCodecRelationTags {
-    archivedRelation?: boolean;
-  }
-}
 
 /*
  * keyword should probably end in 'ed', e.g. 'archived', 'deleted',
