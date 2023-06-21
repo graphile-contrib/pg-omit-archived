@@ -23,12 +23,16 @@
     "graphile-utils": "^5.0.0-alpha.0"
   },
   "peerDependencies": {
+    "@dataplan/pg": "^0.0.1-alpha.10",
     "graphile-build-pg": "^5.0.0-alpha.0",
+    "graphile-config": "^0.0.1-alpha.4",
     "postgraphile": "^5.0.0-alpha.0"
   },
   "devDependencies": {
+    "@dataplan/pg": "^0.0.1-alpha.10",
     "@tsconfig/node16": "^1.0.0",
     "graphile-build-pg": "^5.0.0-alpha.0",
+    "graphile-config": "^0.0.1-alpha.4",
     "graphql": "16.x",
     "jest": "^28.1.3",
     "jest-serializer-graphql-schema": "^5.0.0-alpha.0",

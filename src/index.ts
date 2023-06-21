@@ -4,16 +4,17 @@
  * https://sprout.io
  */
 
-import { makePluginByCombiningPlugins } from "graphile-utils";
-import type { Build, Plugin as GraphileEnginePlugin } from "postgraphile";
+import type {} from "graphile-config";
+import type {} from "graphile-build-pg";
+import type { PgSQL, SQL } from "pg-sql2";
+import type { ConnectionStep, FieldArgs, ExecutableStep } from "grafast";
 import type {
-  PgAttribute,
-  PgClass,
-  PgConstraint,
-  PgIntrospectionResultsByKind,
-  QueryBuilder,
-  SQL,
-} from "graphile-build-pg";
+  PgCodecRelation,
+  PgCodecWithAttributes,
+  PgRegistry,
+  PgSelectStep,
+} from "@dataplan/pg";
+import { TYPES, PgSelectSingleStep } from "@dataplan/pg";
 
 /**
  * Build utils
@@ -25,48 +26,67 @@ import type {
  * @param allowInherit - Should we allow inheritance if it seems possible?
  */
 const makeUtils = (
-  build: Build,
+  build: GraphileBuild.Build,
   keyword: string,
-  table: PgClass,
-  parentTable: PgClass,
+  table: PgCodecWithAttributes,
+  parentTable: PgCodecWithAttributes | undefined,
   allowInherit?: boolean,
-  relevantRelation?: PgConstraint | null,
+  relevantRelationName?: string | null,
 ) => {
+  const relevantRelation = relevantRelationName
+    ? (build.input.pgRegistry.pgRelations[table.name][
+        relevantRelationName
+      ] as PgCodecRelation)
+    : undefined;
   const Keyword = keyword[0].toUpperCase() + keyword.slice(1);
   const {
     inflection,
     getTypeByName,
     options: {
-      [`pg${Keyword}ColumnName`]: columnNameToCheck = `is_${keyword}`,
+      [`pg${Keyword}ColumnName` as "pgArchivedColumnName"]:
+        columnNameToCheck = `is_${keyword}`,
       // If true inverts the omitting logic (e.g. true for `is_published` or
       // `published_at`; false for `is_archived` or `archived_at`).
-      [`pg${Keyword}ColumnImpliesVisible`]: invert = false,
-      [`pg${Keyword}Relations`]: applyToRelations = false,
-      [`pg${Keyword}Expression`]: expression = null,
-      [`pg${Keyword}Tables`]: rawTables = null,
+      [`pg${Keyword}ColumnImpliesVisible` as "pgArchivedColumnImpliesVisible"]:
+        invert = false,
+      [`pg${Keyword}Relations` as "pgArchivedRelations"]:
+        applyToRelations = false,
+      [`pg${Keyword}Expression` as "pgArchivedExpression"]: expression = null,
+      [`pg${Keyword}Tables` as "pgArchivedTables"]: rawTables = null,
     },
   } = build;
-  const sql = build.pgSql as typeof import("pg-sql2");
-  const introspectionResultsByKind = build.pgIntrospectionResultsByKind as PgIntrospectionResultsByKind;
+  const sql = build.sql;
   const OptionType = getTypeByName(`Include${Keyword}Option`);
 
-  if (expression && build.options[`pg${Keyword}ColumnName`]) {
+  if (
+    expression &&
+    build.options[`pg${Keyword}ColumnName` as "pgArchivedColumnName"]
+  ) {
     throw new Error(
       `'pg${Keyword}Expression' cannot be combined with 'pg${Keyword}ColumnName'`,
     );
   }
-  if (expression && build.options[`pg${Keyword}ColumnImpliesVisible`]) {
+  if (
+    expression &&
+    build.options[
+      `pg${Keyword}ColumnImpliesVisible` as "pgArchivedColumnImpliesVisible"
+    ]
+  ) {
     throw new Error(
       `'pg${Keyword}Expression' cannot be combined with 'pg${Keyword}ColumnImpliesVisible'`,
     );
   }
-  if (expression && !build.options[`pg${Keyword}Tables`]) {
+  if (
+    expression &&
+    !build.options[`pg${Keyword}Tables` as "pgArchivedTables"]
+  ) {
     throw new Error(
       `'pg${Keyword}Expression' requires 'pg${Keyword}Tables' to be set to a list of the tables to which this expression can apply.`,
     );
   }
 
-  const defaultValue = build.options[`pg${Keyword}Default`] || "NO";
+  const defaultValue =
+    build.options[`pg${Keyword}Default` as "pgArchivedDefault"] || "NO";
 
   const tables = rawTables
     ? (rawTables as string[]).map((t) => {
@@ -80,56 +100,74 @@ const makeUtils = (
       })
     : null;
 
-  const getRelevantColumn = (tableToCheck: PgClass) =>
-    tableToCheck
-      ? introspectionResultsByKind.attribute.find(
-          (attr) =>
-            attr.classId === tableToCheck.id && attr.name === columnNameToCheck,
-        )
-      : null;
+  const getRelevantColumn = (
+    tableToCheck: PgCodecWithAttributes | null | undefined,
+  ) => {
+    const col = tableToCheck?.attributes[columnNameToCheck];
+    if (col) {
+      return { columnName: columnNameToCheck, column: col };
+    }
+  };
 
-  const _tableIsAllowed = (table: PgClass | null | undefined) =>
+  const _tableIsAllowed = (table: PgCodecWithAttributes | null | undefined) =>
     table != null &&
     (tables == null ||
-      tables.some((t) => table.namespaceName === t[0] && table.name === t[1]));
+      tables.some(
+        (t) =>
+          table.extensions?.pg?.schemaName === t[0] &&
+          table.extensions.pg.name === t[1],
+      ));
 
-  const appliesToTable = (table: PgClass) =>
+  const appliesToTable = (table: PgCodecWithAttributes | undefined) =>
     _tableIsAllowed(table) && (expression || getRelevantColumn(table));
 
   if (relevantRelation) {
-    if (!applyToRelations && !relevantRelation.tags[`${keyword}Relation`]) {
+    if (
+      !applyToRelations &&
+      !relevantRelation.extensions?.tags[
+        `${keyword}Relation` as "archivedRelation"
+      ]
+    ) {
       return null;
     }
     if (
-      !relevantRelation.foreignClass ||
-      relevantRelation.classId !== table.id ||
-      !appliesToTable(relevantRelation.foreignClass)
+      !appliesToTable(
+        relevantRelation.remoteResource.codec as PgCodecWithAttributes,
+      )
     ) {
       return null;
     }
   }
 
   const relevantClass = relevantRelation
-    ? (relevantRelation.foreignClass as PgClass | never)
+    ? (relevantRelation.remoteResource.codec as PgCodecWithAttributes)
     : table;
 
   if (!relevantClass) {
     return null;
   }
 
-  const relevantColumn = getRelevantColumn(relevantClass);
+  const relevantColumnDetails = getRelevantColumn(relevantClass);
 
-  const argumentName = inflection[`include${Keyword}Argument`](
-    table,
-    relevantRelation,
-  );
+  const argumentName = inflection[
+    `include${Keyword}Argument` as "includeArchivedArgument"
+  ]({
+    codec: table,
+    registry: build.input.pgRegistry,
+    relationName: relevantRelationName ?? undefined,
+  });
 
-  const parentTableRelevantColumn = getRelevantColumn(parentTable);
+  const parentTableRelevantColumnDetails = getRelevantColumn(parentTable);
   const capableOfInherit = allowInherit && appliesToTable(parentTable);
-  const pgRelevantColumnIsBoolean = relevantColumn?.type.category === "B";
+  // TODO: In v4, both of these checks used the "type category" `B` to
+  // determine it was boolean. Here we're only supporting the builtin boolean
+  // (and not even a domain over it). I doubt this will cause issues for many
+  // people (if any), but we should revisit.
+  const pgRelevantColumnIsBoolean =
+    relevantColumnDetails?.column.codec.name === "bool";
   const pgParentRelevantColumnIsBoolean =
-    parentTableRelevantColumn &&
-    parentTableRelevantColumn.type.category === "B";
+    parentTableRelevantColumnDetails &&
+    parentTableRelevantColumnDetails.column.codec.name === "bool";
 
   const booleanVisibleFragment = invert
     ? sql.fragment`true`
@@ -150,16 +188,18 @@ const makeUtils = (
   const rawLocalDetails = expression
     ? appliesToTable(relevantClass)
       ? {
-          expression: (_sql: typeof sql, tableAlias: SQL) =>
+          expression: (_sql: PgSQL, tableAlias: SQL) =>
             sql.fragment`(${expression(sql, tableAlias)})`,
           visibleFragment: booleanVisibleFragment,
           invisibleFragment: booleanInvisibleFragment,
         }
       : null
-    : relevantColumn
+    : relevantColumnDetails
     ? {
         expression: (_sql: typeof sql, tableAlias: SQL) =>
-          sql.fragment`${tableAlias}.${sql.identifier(relevantColumn.name)}`,
+          sql.fragment`${tableAlias}.${sql.identifier(
+            relevantColumnDetails.columnName,
+          )}`,
         visibleFragment: pgRelevantColumnIsBoolean
           ? booleanVisibleFragment
           : nullableVisibleFragment,
@@ -182,11 +222,11 @@ const makeUtils = (
           visibleFragment: booleanVisibleFragment,
           invisibleFragment: booleanInvisibleFragment,
         }
-      : parentTableRelevantColumn
+      : parentTableRelevantColumnDetails
       ? {
           expression: (_sql: typeof sql, tableAlias: SQL) =>
             sql.fragment`${tableAlias}.${sql.identifier(
-              parentTableRelevantColumn.name,
+              parentTableRelevantColumnDetails.columnName,
             )}`,
           visibleFragment: pgParentRelevantColumnIsBoolean
             ? booleanVisibleFragment
@@ -198,20 +238,25 @@ const makeUtils = (
       : null
     : null;
 
-  function addWhereClause(queryBuilder: QueryBuilder, fieldArgs: any) {
-    const { [argumentName]: relevantSetting } = fieldArgs;
+  function addWhereClause(
+    $parent: ExecutableStep,
+    $select: PgSelectStep,
+    fieldArgs: FieldArgs,
+  ) {
+    const $parentSelectSingle =
+      $parent instanceof PgSelectSingleStep ? $parent : null;
+    // TODO: don't eval?
+    const relevantSetting = fieldArgs.getRaw().eval();
     let fragment: SQL | null = null;
 
     const myAlias =
-      relevantClass !== table
-        ? sql.identifier(Symbol("me"))
-        : queryBuilder.getTableAlias();
+      relevantClass !== table ? sql.identifier(Symbol("me")) : $select.alias;
     if (
       relevantRelation &&
       relevantClass !== table &&
-      relevantRelation.foreignClass === parentTable &&
+      relevantRelation.remoteResource.codec === parentTable &&
       capableOfInherit &&
-      queryBuilder.parentQueryBuilder &&
+      $parentSelectSingle &&
       parentDetails &&
       ["INHERIT", "YES"].includes(relevantSetting)
     ) {
@@ -231,17 +276,18 @@ const makeUtils = (
     if (
       capableOfInherit &&
       relevantSetting === "INHERIT" &&
-      queryBuilder.parentQueryBuilder &&
+      $parentSelectSingle &&
       parentDetails
     ) {
-      const sqlParentTableAlias = queryBuilder.parentQueryBuilder.getTableAlias();
-      fragment = sql.fragment`(${parentDetails.expression(
-        sql,
-        sqlParentTableAlias,
-      )} is ${parentDetails.invisibleFragment} or ${localDetails.expression(
-        sql,
-        myAlias,
-      )} is ${localDetails.visibleFragment})`;
+      const $parentResult = $parentSelectSingle.select(
+        parentDetails.expression(sql, $parentSelectSingle.getClassStep().alias),
+        TYPES.boolean,
+      );
+      fragment = sql.fragment`(${$select.placeholder($parentResult)} is ${
+        parentDetails.invisibleFragment
+      } or ${localDetails.expression(sql, myAlias)} is ${
+        localDetails.visibleFragment
+      })`;
     } else if (relevantSettingIfNotInherit === "NO") {
       fragment = sql.fragment`${localDetails.expression(sql, myAlias)} is ${
         localDetails.visibleFragment
@@ -253,25 +299,24 @@ const makeUtils = (
     }
     if (fragment) {
       if (relevantRelation && relevantClass !== table) {
-        const localAlias = queryBuilder.getTableAlias();
-        const relationConditions = relevantRelation.keyAttributes.map(
-          (attr, i) => {
-            const otherAttr = relevantRelation.foreignKeyAttributes[i];
+        const localAlias = $select.alias;
+        const relationConditions = relevantRelation.localAttributes.map(
+          (attrName, i) => {
+            const otherAttrName = relevantRelation.remoteAttributes[i];
             return sql.fragment`${localAlias}.${sql.identifier(
-              attr.name,
-            )} = ${myAlias}.${sql.identifier(otherAttr.name)}`;
+              attrName,
+            )} = ${myAlias}.${sql.identifier(otherAttrName)}`;
           },
         );
-        const subquery = sql.fragment`exists (select 1 from ${sql.identifier(
-          relevantClass.namespaceName,
-          relevantClass.name,
-        )} as ${myAlias} where (${sql.join(
+        const subquery = sql.fragment`exists (select 1 from ${
+          relevantRelation.remoteResource.from as SQL
+        } as ${myAlias} where (${sql.join(
           relationConditions,
           ") and (",
         )}) and (${fragment}))`;
-        queryBuilder.where(subquery);
+        $select.where(subquery);
       } else {
-        queryBuilder.where(fragment);
+        $select.where(fragment);
       }
     }
   }
@@ -283,214 +328,246 @@ const makeUtils = (
   };
 };
 
+declare global {
+  namespace GraphileBuild {
+    interface Inflection {
+      // If you use other keywords, you will need to declaration merge your own inflectors for TypeScript.
+      includeArchivedArgument(
+        this: Inflection,
+        details: {
+          codec: PgCodecWithAttributes;
+          registry: PgRegistry;
+          relationName?: string;
+        },
+      ): string;
+    }
+    interface SchemaOptions {
+      /**
+       * The name of the column to use to determine if the record is archived
+       * or not. Defaults to 'is_archived'
+       */
+      pgArchivedColumnName?: string;
+      /**
+       * Set this true to invert the column logic - i.e. if your column is
+       * `is_visible` instead of `is_archived`.
+       */
+      pgArchivedColumnImpliesVisible?: boolean;
+      /**
+       * If your determination of whether a record is archived or not is more complex
+       * than checking if a column is not null/not false then you can define an SQL
+       * expression instead.
+       */
+      pgArchivedExpression?: (sql: PgSQL, tableAlias: SQL) => SQL;
+      /**
+       * The default option to use for the 'includeArchived' argument. Defaults
+       * to 'NO', but will be replaced with 'INHERIT' where possible unless you set
+       * `pgArchivedDefaultInherit` to false.
+       */
+      pgArchivedDefault?: "INHERIT" | "NO" | "YES" | "EXCLUSIVELY";
+      /**
+       * Set false if you don't want the system to default to 'INHERIT' if it's
+       * able to do so.
+       */
+      pgArchivedDefaultInherit?: boolean;
+      /**
+       * Set true if you want related record collections to have the
+       * pg-omit-archived behavior if they belong to a table that explicitly
+       * matches.
+       */
+      pgArchivedRelations?: boolean;
+      /**
+       * If you want the system to apply the archived filter to a specific list of tables, list their names here:
+       */
+      pgArchivedTables?: string[];
+    }
+    interface ScopeObjectFieldsFieldArgs {
+      /**
+       * Set true if child fields should always include archived entries.
+       */
+      includeArchived?: boolean;
+    }
+  }
+}
+declare module "graphile-build-pg" {
+  interface PgCodecRelationTags {
+    archivedRelation?: boolean;
+  }
+}
+
 /*
  * keyword should probably end in 'ed', e.g. 'archived', 'deleted',
  * 'eradicated', 'unpublished', though 'scheduledForDeletion' is probably okay,
  * as is 'template' or 'draft' - have a read through where it's used and judge
  * for yourself
  */
-const generator = (keyword = "archived"): GraphileEnginePlugin => {
+const generator = (keyword = "archived"): GraphileConfig.Plugin => {
   const Keyword = keyword[0].toUpperCase() + keyword.slice(1);
 
-  /*
-  const AddToEnumPlugin = makeExtendSchemaPlugin(() => ({
-    typeDefs: gql_`
-      """
-      Indicates whether ${keyword} items should be included in the results or not.
-      """
-      enum Include${Keyword}Option @scope(isInclude${Keyword}OptionEnum: true) {
-        """
-        Exclude ${keyword} items.
-        """
-        NO
+  return {
+    name: `PgOmit${Keyword}Plugin`,
+    version: "0.0.0",
 
-        """
-        Include ${keyword} items.
-        """
-        YES
-
-        """
-        Only include ${keyword} items (i.e. exclude non-${keyword} items).
-        """
-        EXCLUSIVELY
-
-        """
-        If there is a parent GraphQL record and it is ${keyword} then this is equivalent to YES, in all other cases this is equivalent to NO.
-        """
-        INHERIT
-      }
-    `,
-    resolvers: {
-      [`Include${Keyword}Option`]: {
-        NO: "NO",
-        YES: "YES",
-        EXCLUSIVELY: "EXCLUSIVELY",
-        INHERIT: "INHERIT",
+    inflection: {
+      add: {
+        [`include${Keyword}Argument` as "includeArchivedArgument"](
+          _options,
+          { codec, registry, relationName },
+        ) {
+          const relationPart = relationName
+            ? this.singleRelation({
+                codec,
+                registry,
+                relationName,
+              })
+            : null;
+          const argumentName = relationPart
+            ? `includeWhen${this.upperCamelCase(relationPart)}${Keyword}`
+            : `include${Keyword}`;
+          return argumentName;
+        },
       },
     },
-  }));
-  */
 
-  const AddInflectorsPlugin: GraphileEnginePlugin = (builder) => {
-    builder.hook("inflection", (inflection, build) => {
-      return build.extend(
-        inflection,
-        {
-          [`include${Keyword}Argument`](
-            table: PgClass,
-            relation: PgConstraint,
-          ) {
-            const relationPart = relation
-              ? inflection.singleRelationByKeys(
-                  relation.keyAttributes,
-                  relation.foreignClass,
-                  table,
-                  relation,
-                )
-              : null;
-            const argumentName = relationPart
-              ? `includeWhen${inflection.upperCamelCase(
-                  relationPart,
-                )}${Keyword}`
-              : `include${Keyword}`;
-            return argumentName;
-          },
-        },
-        `Adding inflectors for '${keyword}' pg-omit-archived`,
-      );
-    });
-  };
-
-  const AddToEnumPlugin: GraphileEnginePlugin = (builder) => {
-    /* Had to move this to the build phase so that other plugins can use it */
-    builder.hook("build", (build) => {
-      const {
-        graphql: { GraphQLEnumType },
-      } = build;
-      const defaultValue = build.options[`pg${Keyword}Default`] || "NO";
-      build.newWithHooks(
-        GraphQLEnumType,
-        {
-          name: `Include${Keyword}Option`,
-          description: `Indicates whether ${keyword} items should be included in the results or not.`,
-          values: {
-            NO: {
-              value: "NO",
-              description: `Exclude ${keyword} items.`,
-            },
-            YES: {
-              description: `Include ${keyword} items.`,
-              value: "YES",
-            },
-            EXCLUSIVELY: {
-              description: `Only include ${keyword} items (i.e. exclude non-${keyword} items).`,
-              value: "EXCLUSIVELY",
-            },
-            INHERIT: {
-              description: `If there is a parent GraphQL record and it is ${keyword} then this is equivalent to YES, in all other cases this is equivalent to ${
-                defaultValue === "INHERIT" ? "NO" : defaultValue
-              }.`,
-              value: "INHERIT",
-            },
-          },
-        },
-        {
-          [`isInclude${Keyword}OptionEnum`]: true,
-        },
-      );
-      return build;
-    });
-  };
-
-  const PgOmitInnerPlugin: GraphileEnginePlugin = (builder) => {
-    builder.hook(
-      "GraphQLObjectType:fields:field:args",
-      (args, build, context) => {
-        const { extend } = build;
-        const {
-          scope: {
-            isPgFieldConnection,
-            isPgFieldSimpleCollection,
-            isPgBackwardRelationField,
-            pgFieldIntrospection,
-            pgIntrospection: parentTable,
-            [`include${Keyword}`]: includeArchived,
-          },
-          addArgDataGenerator,
-          Self,
-          field,
-        } = context;
-        const defaultValue = build.options[`pg${Keyword}Default`] || "NO";
-        const defaultInherit =
-          build.options[`pg${Keyword}DefaultInherit`] !== false;
-        const table: PgClass = pgFieldIntrospection;
-        if (
-          !(isPgFieldConnection || isPgFieldSimpleCollection) ||
-          !table ||
-          table.kind !== "class" ||
-          !table.namespace ||
-          includeArchived
-        ) {
-          return args;
-        }
-        const allowInherit = isPgBackwardRelationField;
-        const selfAndConstraints = [
-          null,
-          ...table.constraints
-            .filter((c) => c.type === "f")
-            .sort((a, z) => a.name.localeCompare(z.name)),
-        ];
-        const allUtils = selfAndConstraints.map((relation) =>
-          makeUtils(build, keyword, table, parentTable, allowInherit, relation),
-        );
-        if (!allUtils) {
-          return args;
-        }
-        return allUtils.reduce((args, utils) => {
-          if (!utils) {
-            return args;
-          }
-          const {
-            addWhereClause,
-            OptionType,
-            capableOfInherit,
-            argumentName,
-          } = utils;
-          if (!!args[argumentName]) {
-            return args;
-          }
-          addArgDataGenerator(function connectionCondition(fieldArgs: any) {
-            return {
-              pgQuery: (queryBuilder: QueryBuilder) => {
-                addWhereClause(queryBuilder, fieldArgs);
-              },
-            };
-          });
-
-          return extend(
-            args,
+    schema: {
+      hooks: {
+        init(_, build) {
+          const defaultValue =
+            build.options[`pg${Keyword}Default` as "pgArchivedDefault"] || "NO";
+          build.registerEnumType(
+            `Include${Keyword}Option`,
             {
-              [argumentName]: {
-                description: `Indicates whether ${keyword} items should be included in the results or not.`,
-                type: OptionType,
-                defaultValue:
-                  capableOfInherit && defaultInherit ? "INHERIT" : defaultValue,
-              },
+              [`isInclude${Keyword}OptionEnum`]: true,
             },
-            `Adding ${argumentName} argument to connection field '${field.name}' of '${Self.name}'`,
+            () => ({
+              name: `Include${Keyword}Option`,
+              description: `Indicates whether ${keyword} items should be included in the results or not.`,
+              values: {
+                NO: {
+                  value: "NO",
+                  description: `Exclude ${keyword} items.`,
+                },
+                YES: {
+                  description: `Include ${keyword} items.`,
+                  value: "YES",
+                },
+                EXCLUSIVELY: {
+                  description: `Only include ${keyword} items (i.e. exclude non-${keyword} items).`,
+                  value: "EXCLUSIVELY",
+                },
+                INHERIT: {
+                  description: `If there is a parent GraphQL record and it is ${keyword} then this is equivalent to YES, in all other cases this is equivalent to ${
+                    defaultValue === "INHERIT" ? "NO" : defaultValue
+                  }.`,
+                  value: "INHERIT",
+                },
+              },
+            }),
+            "",
           );
-        }, args);
-      },
-    );
-  };
+          return _;
+        },
+        GraphQLObjectType_fields_field_args(args, build, context) {
+          const { extend } = build;
+          const {
+            scope: {
+              isPgFieldConnection,
+              isPgFieldSimpleCollection,
+              pgRelationDetails,
+              pgCodec,
+              pgFieldCodec,
+              //pgFieldIntrospection,
+              // pgIntrospection: parentTable,
+              [`include${Keyword}` as "includeArchived"]: includeArchived,
+              fieldName,
+            },
+            Self,
+          } = context;
+          const relation = pgRelationDetails
+            ? pgRelationDetails.registry.pgRelations[
+                pgRelationDetails.codec.name
+              ][pgRelationDetails.relationName]
+            : null;
+          const isPgBackwardRelationField = relation?.isReferencee;
+          const defaultValue =
+            build.options[`pg${Keyword}Default` as "pgArchivedDefault"] || "NO";
+          const defaultInherit =
+            build.options[
+              `pg${Keyword}DefaultInherit` as "pgArchivedDefaultInherit"
+            ] !== false;
+          if (
+            !(isPgFieldConnection || isPgFieldSimpleCollection) ||
+            !pgFieldCodec ||
+            !pgFieldCodec.attributes ||
+            includeArchived
+          ) {
+            return args;
+          }
+          const allowInherit = isPgBackwardRelationField;
+          const relationsLookup =
+            build.input.pgRegistry.pgRelations[pgFieldCodec.name];
+          const relationNames = relationsLookup
+            ? (Object.keys(relationsLookup) as string[])
+            : [];
+          const selfAndRelationNames = [null, ...relationNames];
+          const allUtils = selfAndRelationNames.map((relationName) =>
+            makeUtils(
+              build,
+              keyword,
+              pgFieldCodec,
+              pgCodec,
+              allowInherit,
+              relationName,
+            ),
+          );
+          if (!allUtils) {
+            return args;
+          }
+          return allUtils.reduce((args, utils) => {
+            if (!utils) {
+              return args;
+            }
+            const {
+              addWhereClause,
+              OptionType,
+              capableOfInherit,
+              argumentName,
+            } = utils;
+            if (!!args[argumentName]) {
+              return args;
+            }
 
-  const Plugin = makePluginByCombiningPlugins(
-    AddInflectorsPlugin,
-    AddToEnumPlugin,
-    PgOmitInnerPlugin,
-  );
-  Plugin.displayName = `PgOmit${Keyword}Plugin`;
-  return Plugin;
+            return extend(
+              args,
+              {
+                [argumentName]: {
+                  description: `Indicates whether ${keyword} items should be included in the results or not.`,
+                  type: OptionType,
+                  defaultValue:
+                    capableOfInherit && defaultInherit
+                      ? "INHERIT"
+                      : defaultValue,
+                  autoApplyAfterParentPlan: true,
+                  applyPlan: isPgFieldConnection
+                    ? (
+                        $parent: ExecutableStep,
+                        $connection: ConnectionStep<any, any, PgSelectStep>,
+                        arg,
+                      ) => {
+                        const $select = $connection.getSubplan();
+                        addWhereClause($parent, $select, arg);
+                      }
+                    : ($parent: ExecutableStep, $select: PgSelectStep, arg) => {
+                        addWhereClause($parent, $select, arg);
+                      },
+                },
+              },
+              `Adding ${argumentName} argument to connection field '${fieldName}' of '${Self.name}'`,
+            );
+          }, args);
+        },
+      },
+    },
+  };
 };
 
 const Plugin = Object.assign(generator(), {
