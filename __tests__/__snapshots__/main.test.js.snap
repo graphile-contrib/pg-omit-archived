@@ -89,7 +89,7 @@ type ChildrenConnection {
   """
   A list of edges which contains the \`Child\` and cursor to aid in pagination.
   """
-  edges: [ChildrenEdge!]!
+  edges: [ChildrenEdge]!
 
   """A list of \`Child\` objects."""
   nodes: [Child]!
@@ -155,7 +155,7 @@ type CreateChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -202,7 +202,7 @@ type CreateOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -237,7 +237,7 @@ type CreateOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -275,7 +275,7 @@ type CreateParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -289,7 +289,10 @@ scalar Cursor
 
 """
 A point in time as described by the [ISO
-8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
+8601](https://en.wikipedia.org/wiki/ISO_8601) and, if it has a timezone, [RFC
+3339](https://datatracker.ietf.org/doc/html/rfc3339) standards. Input values
+that do not conform to both ISO 8601 and RFC 3339 may be coerced, which may lead
+to unexpected results.
 """
 scalar Datetime
 
@@ -325,7 +328,7 @@ type DeleteChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -386,7 +389,7 @@ type DeleteOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -434,7 +437,7 @@ type DeleteOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -485,7 +488,7 @@ type DeleteParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -502,8 +505,7 @@ enum IncludeArchivedOption {
   EXCLUSIVELY
 
   """
-  If there is a parent GraphQL record and it is archived then this is equivalent
-  to YES, in all other cases this is equivalent to NO.
+  If there is a parent GraphQL record and it is archived then this is equivalent to YES, in all other cases this is equivalent to NO.
   """
   INHERIT
 
@@ -838,7 +840,7 @@ type OrganizationsConnection {
   """
   A list of edges which contains the \`Organization\` and cursor to aid in pagination.
   """
-  edges: [OrganizationsEdge!]!
+  edges: [OrganizationsEdge]!
 
   """A list of \`Organization\` objects."""
   nodes: [Organization]!
@@ -930,7 +932,7 @@ type OtherChildrenConnection {
   """
   A list of edges which contains the \`OtherChild\` and cursor to aid in pagination.
   """
-  edges: [OtherChildrenEdge!]!
+  edges: [OtherChildrenEdge]!
 
   """A list of \`OtherChild\` objects."""
   nodes: [OtherChild]!
@@ -1181,7 +1183,7 @@ type ParentsConnection {
   """
   A list of edges which contains the \`Parent\` and cursor to aid in pagination.
   """
-  edges: [ParentsEdge!]!
+  edges: [ParentsEdge]!
 
   """A list of \`Parent\` objects."""
   nodes: [Parent]!
@@ -1474,6 +1476,8 @@ type Query implements Node {
     """The globally unique \`ID\` to be used in selecting a single \`Child\`."""
     nodeId: ID!
   ): Child
+
+  """Get a single \`Child\`."""
   childById(id: Int!): Child
 
   """Fetches an object given its globally unique \`ID\`."""
@@ -1494,6 +1498,8 @@ type Query implements Node {
     """
     nodeId: ID!
   ): Organization
+
+  """Get a single \`Organization\`."""
   organizationById(id: Int!): Organization
 
   """Reads a single \`OtherChild\` using its globally unique \`ID\`."""
@@ -1503,6 +1509,8 @@ type Query implements Node {
     """
     nodeId: ID!
   ): OtherChild
+
+  """Get a single \`OtherChild\`."""
   otherChildById(id: Int!): OtherChild
 
   """Reads a single \`Parent\` using its globally unique \`ID\`."""
@@ -1510,6 +1518,8 @@ type Query implements Node {
     """The globally unique \`ID\` to be used in selecting a single \`Parent\`."""
     nodeId: ID!
   ): Parent
+
+  """Get a single \`Parent\`."""
   parentById(id: Int!): Parent
 
   """
@@ -1561,7 +1571,7 @@ type UpdateChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -1630,7 +1640,7 @@ type UpdateOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -1687,7 +1697,7 @@ type UpdateOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -1747,7 +1757,7 @@ type UpdateParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -1755,7 +1765,6 @@ type UpdateParentPayload {
   """
   query: Query
 }
-
 `;
 
 exports[`default schema matches snapshot 1`] = `
@@ -3443,7 +3452,6 @@ type UpdateParentPayload {
   """
   query: Query
 }
-
 `;
 
 exports[`default_w_comment schema matches snapshot 1`] = `
@@ -3535,7 +3543,7 @@ type ChildrenConnection {
   """
   A list of edges which contains the \`Child\` and cursor to aid in pagination.
   """
-  edges: [ChildrenEdge!]!
+  edges: [ChildrenEdge]!
 
   """A list of \`Child\` objects."""
   nodes: [Child]!
@@ -3601,7 +3609,7 @@ type CreateChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -3648,7 +3656,7 @@ type CreateOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -3683,7 +3691,7 @@ type CreateOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -3721,7 +3729,7 @@ type CreateParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -3735,7 +3743,10 @@ scalar Cursor
 
 """
 A point in time as described by the [ISO
-8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
+8601](https://en.wikipedia.org/wiki/ISO_8601) and, if it has a timezone, [RFC
+3339](https://datatracker.ietf.org/doc/html/rfc3339) standards. Input values
+that do not conform to both ISO 8601 and RFC 3339 may be coerced, which may lead
+to unexpected results.
 """
 scalar Datetime
 
@@ -3771,7 +3782,7 @@ type DeleteChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -3832,7 +3843,7 @@ type DeleteOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -3880,7 +3891,7 @@ type DeleteOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -3931,7 +3942,7 @@ type DeleteParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -3948,8 +3959,7 @@ enum IncludeArchivedOption {
   EXCLUSIVELY
 
   """
-  If there is a parent GraphQL record and it is archived then this is equivalent
-  to YES, in all other cases this is equivalent to NO.
+  If there is a parent GraphQL record and it is archived then this is equivalent to YES, in all other cases this is equivalent to NO.
   """
   INHERIT
 
@@ -4274,7 +4284,7 @@ type OrganizationsConnection {
   """
   A list of edges which contains the \`Organization\` and cursor to aid in pagination.
   """
-  edges: [OrganizationsEdge!]!
+  edges: [OrganizationsEdge]!
 
   """A list of \`Organization\` objects."""
   nodes: [Organization]!
@@ -4366,7 +4376,7 @@ type OtherChildrenConnection {
   """
   A list of edges which contains the \`OtherChild\` and cursor to aid in pagination.
   """
-  edges: [OtherChildrenEdge!]!
+  edges: [OtherChildrenEdge]!
 
   """A list of \`OtherChild\` objects."""
   nodes: [OtherChild]!
@@ -4597,7 +4607,7 @@ type ParentsConnection {
   """
   A list of edges which contains the \`Parent\` and cursor to aid in pagination.
   """
-  edges: [ParentsEdge!]!
+  edges: [ParentsEdge]!
 
   """A list of \`Parent\` objects."""
   nodes: [Parent]!
@@ -4870,6 +4880,8 @@ type Query implements Node {
     """The globally unique \`ID\` to be used in selecting a single \`Child\`."""
     nodeId: ID!
   ): Child
+
+  """Get a single \`Child\`."""
   childById(id: Int!): Child
 
   """Fetches an object given its globally unique \`ID\`."""
@@ -4890,6 +4902,8 @@ type Query implements Node {
     """
     nodeId: ID!
   ): Organization
+
+  """Get a single \`Organization\`."""
   organizationById(id: Int!): Organization
 
   """Reads a single \`OtherChild\` using its globally unique \`ID\`."""
@@ -4899,6 +4913,8 @@ type Query implements Node {
     """
     nodeId: ID!
   ): OtherChild
+
+  """Get a single \`OtherChild\`."""
   otherChildById(id: Int!): OtherChild
 
   """Reads a single \`Parent\` using its globally unique \`ID\`."""
@@ -4906,6 +4922,8 @@ type Query implements Node {
     """The globally unique \`ID\` to be used in selecting a single \`Parent\`."""
     nodeId: ID!
   ): Parent
+
+  """Get a single \`Parent\`."""
   parentById(id: Int!): Parent
 
   """
@@ -4957,7 +4975,7 @@ type UpdateChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -5026,7 +5044,7 @@ type UpdateOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -5083,7 +5101,7 @@ type UpdateOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -5143,7 +5161,7 @@ type UpdateParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -5151,7 +5169,6 @@ type UpdateParentPayload {
   """
   query: Query
 }
-
 `;
 
 exports[`is_archived schema matches snapshot 1`] = `
@@ -5243,7 +5260,7 @@ type ChildrenConnection {
   """
   A list of edges which contains the \`Child\` and cursor to aid in pagination.
   """
-  edges: [ChildrenEdge!]!
+  edges: [ChildrenEdge]!
 
   """A list of \`Child\` objects."""
   nodes: [Child]!
@@ -5309,7 +5326,7 @@ type CreateChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -5356,7 +5373,7 @@ type CreateOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -5391,7 +5408,7 @@ type CreateOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -5429,7 +5446,7 @@ type CreateParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -5443,7 +5460,10 @@ scalar Cursor
 
 """
 A point in time as described by the [ISO
-8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
+8601](https://en.wikipedia.org/wiki/ISO_8601) and, if it has a timezone, [RFC
+3339](https://datatracker.ietf.org/doc/html/rfc3339) standards. Input values
+that do not conform to both ISO 8601 and RFC 3339 may be coerced, which may lead
+to unexpected results.
 """
 scalar Datetime
 
@@ -5479,7 +5499,7 @@ type DeleteChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -5540,7 +5560,7 @@ type DeleteOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -5588,7 +5608,7 @@ type DeleteOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -5639,7 +5659,7 @@ type DeleteParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -5656,8 +5676,7 @@ enum IncludeArchivedOption {
   EXCLUSIVELY
 
   """
-  If there is a parent GraphQL record and it is archived then this is equivalent
-  to YES, in all other cases this is equivalent to NO.
+  If there is a parent GraphQL record and it is archived then this is equivalent to YES, in all other cases this is equivalent to NO.
   """
   INHERIT
 
@@ -5992,7 +6011,7 @@ type OrganizationsConnection {
   """
   A list of edges which contains the \`Organization\` and cursor to aid in pagination.
   """
-  edges: [OrganizationsEdge!]!
+  edges: [OrganizationsEdge]!
 
   """A list of \`Organization\` objects."""
   nodes: [Organization]!
@@ -6084,7 +6103,7 @@ type OtherChildrenConnection {
   """
   A list of edges which contains the \`OtherChild\` and cursor to aid in pagination.
   """
-  edges: [OtherChildrenEdge!]!
+  edges: [OtherChildrenEdge]!
 
   """A list of \`OtherChild\` objects."""
   nodes: [OtherChild]!
@@ -6335,7 +6354,7 @@ type ParentsConnection {
   """
   A list of edges which contains the \`Parent\` and cursor to aid in pagination.
   """
-  edges: [ParentsEdge!]!
+  edges: [ParentsEdge]!
 
   """A list of \`Parent\` objects."""
   nodes: [Parent]!
@@ -6628,6 +6647,8 @@ type Query implements Node {
     """The globally unique \`ID\` to be used in selecting a single \`Child\`."""
     nodeId: ID!
   ): Child
+
+  """Get a single \`Child\`."""
   childById(id: Int!): Child
 
   """Fetches an object given its globally unique \`ID\`."""
@@ -6648,6 +6669,8 @@ type Query implements Node {
     """
     nodeId: ID!
   ): Organization
+
+  """Get a single \`Organization\`."""
   organizationById(id: Int!): Organization
 
   """Reads a single \`OtherChild\` using its globally unique \`ID\`."""
@@ -6657,6 +6680,8 @@ type Query implements Node {
     """
     nodeId: ID!
   ): OtherChild
+
+  """Get a single \`OtherChild\`."""
   otherChildById(id: Int!): OtherChild
 
   """Reads a single \`Parent\` using its globally unique \`ID\`."""
@@ -6664,6 +6689,8 @@ type Query implements Node {
     """The globally unique \`ID\` to be used in selecting a single \`Parent\`."""
     nodeId: ID!
   ): Parent
+
+  """Get a single \`Parent\`."""
   parentById(id: Int!): Parent
 
   """
@@ -6715,7 +6742,7 @@ type UpdateChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -6784,7 +6811,7 @@ type UpdateOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -6841,7 +6868,7 @@ type UpdateOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -6901,7 +6928,7 @@ type UpdateParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -6909,7 +6936,6 @@ type UpdateParentPayload {
   """
   query: Query
 }
-
 `;
 
 exports[`is_published schema matches snapshot 1`] = `
@@ -7001,7 +7027,7 @@ type ChildrenConnection {
   """
   A list of edges which contains the \`Child\` and cursor to aid in pagination.
   """
-  edges: [ChildrenEdge!]!
+  edges: [ChildrenEdge]!
 
   """A list of \`Child\` objects."""
   nodes: [Child]!
@@ -7067,7 +7093,7 @@ type CreateChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -7114,7 +7140,7 @@ type CreateOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -7149,7 +7175,7 @@ type CreateOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -7187,7 +7213,7 @@ type CreateParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -7201,7 +7227,10 @@ scalar Cursor
 
 """
 A point in time as described by the [ISO
-8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
+8601](https://en.wikipedia.org/wiki/ISO_8601) and, if it has a timezone, [RFC
+3339](https://datatracker.ietf.org/doc/html/rfc3339) standards. Input values
+that do not conform to both ISO 8601 and RFC 3339 may be coerced, which may lead
+to unexpected results.
 """
 scalar Datetime
 
@@ -7237,7 +7266,7 @@ type DeleteChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -7298,7 +7327,7 @@ type DeleteOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -7346,7 +7375,7 @@ type DeleteOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -7397,7 +7426,7 @@ type DeleteParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -7414,8 +7443,7 @@ enum IncludeDraftOption {
   EXCLUSIVELY
 
   """
-  If there is a parent GraphQL record and it is draft then this is equivalent to
-  YES, in all other cases this is equivalent to NO.
+  If there is a parent GraphQL record and it is draft then this is equivalent to YES, in all other cases this is equivalent to NO.
   """
   INHERIT
 
@@ -7750,7 +7778,7 @@ type OrganizationsConnection {
   """
   A list of edges which contains the \`Organization\` and cursor to aid in pagination.
   """
-  edges: [OrganizationsEdge!]!
+  edges: [OrganizationsEdge]!
 
   """A list of \`Organization\` objects."""
   nodes: [Organization]!
@@ -7842,7 +7870,7 @@ type OtherChildrenConnection {
   """
   A list of edges which contains the \`OtherChild\` and cursor to aid in pagination.
   """
-  edges: [OtherChildrenEdge!]!
+  edges: [OtherChildrenEdge]!
 
   """A list of \`OtherChild\` objects."""
   nodes: [OtherChild]!
@@ -8093,7 +8121,7 @@ type ParentsConnection {
   """
   A list of edges which contains the \`Parent\` and cursor to aid in pagination.
   """
-  edges: [ParentsEdge!]!
+  edges: [ParentsEdge]!
 
   """A list of \`Parent\` objects."""
   nodes: [Parent]!
@@ -8386,6 +8414,8 @@ type Query implements Node {
     """The globally unique \`ID\` to be used in selecting a single \`Child\`."""
     nodeId: ID!
   ): Child
+
+  """Get a single \`Child\`."""
   childById(id: Int!): Child
 
   """Fetches an object given its globally unique \`ID\`."""
@@ -8406,6 +8436,8 @@ type Query implements Node {
     """
     nodeId: ID!
   ): Organization
+
+  """Get a single \`Organization\`."""
   organizationById(id: Int!): Organization
 
   """Reads a single \`OtherChild\` using its globally unique \`ID\`."""
@@ -8415,6 +8447,8 @@ type Query implements Node {
     """
     nodeId: ID!
   ): OtherChild
+
+  """Get a single \`OtherChild\`."""
   otherChildById(id: Int!): OtherChild
 
   """Reads a single \`Parent\` using its globally unique \`ID\`."""
@@ -8422,6 +8456,8 @@ type Query implements Node {
     """The globally unique \`ID\` to be used in selecting a single \`Parent\`."""
     nodeId: ID!
   ): Parent
+
+  """Get a single \`Parent\`."""
   parentById(id: Int!): Parent
 
   """
@@ -8473,7 +8509,7 @@ type UpdateChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -8542,7 +8578,7 @@ type UpdateOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -8599,7 +8635,7 @@ type UpdateOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -8659,7 +8695,7 @@ type UpdateParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -8667,7 +8703,6 @@ type UpdateParentPayload {
   """
   query: Query
 }
-
 `;
 
 exports[`published_at schema matches snapshot 1`] = `
@@ -8759,7 +8794,7 @@ type ChildrenConnection {
   """
   A list of edges which contains the \`Child\` and cursor to aid in pagination.
   """
-  edges: [ChildrenEdge!]!
+  edges: [ChildrenEdge]!
 
   """A list of \`Child\` objects."""
   nodes: [Child]!
@@ -8825,7 +8860,7 @@ type CreateChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -8872,7 +8907,7 @@ type CreateOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -8907,7 +8942,7 @@ type CreateOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -8945,7 +8980,7 @@ type CreateParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -8959,7 +8994,10 @@ scalar Cursor
 
 """
 A point in time as described by the [ISO
-8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
+8601](https://en.wikipedia.org/wiki/ISO_8601) and, if it has a timezone, [RFC
+3339](https://datatracker.ietf.org/doc/html/rfc3339) standards. Input values
+that do not conform to both ISO 8601 and RFC 3339 may be coerced, which may lead
+to unexpected results.
 """
 scalar Datetime
 
@@ -8995,7 +9033,7 @@ type DeleteChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -9056,7 +9094,7 @@ type DeleteOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -9104,7 +9142,7 @@ type DeleteOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -9155,7 +9193,7 @@ type DeleteParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -9172,8 +9210,7 @@ enum IncludeDraftOption {
   EXCLUSIVELY
 
   """
-  If there is a parent GraphQL record and it is draft then this is equivalent to
-  YES, in all other cases this is equivalent to NO.
+  If there is a parent GraphQL record and it is draft then this is equivalent to YES, in all other cases this is equivalent to NO.
   """
   INHERIT
 
@@ -9508,7 +9545,7 @@ type OrganizationsConnection {
   """
   A list of edges which contains the \`Organization\` and cursor to aid in pagination.
   """
-  edges: [OrganizationsEdge!]!
+  edges: [OrganizationsEdge]!
 
   """A list of \`Organization\` objects."""
   nodes: [Organization]!
@@ -9600,7 +9637,7 @@ type OtherChildrenConnection {
   """
   A list of edges which contains the \`OtherChild\` and cursor to aid in pagination.
   """
-  edges: [OtherChildrenEdge!]!
+  edges: [OtherChildrenEdge]!
 
   """A list of \`OtherChild\` objects."""
   nodes: [OtherChild]!
@@ -9851,7 +9888,7 @@ type ParentsConnection {
   """
   A list of edges which contains the \`Parent\` and cursor to aid in pagination.
   """
-  edges: [ParentsEdge!]!
+  edges: [ParentsEdge]!
 
   """A list of \`Parent\` objects."""
   nodes: [Parent]!
@@ -10144,6 +10181,8 @@ type Query implements Node {
     """The globally unique \`ID\` to be used in selecting a single \`Child\`."""
     nodeId: ID!
   ): Child
+
+  """Get a single \`Child\`."""
   childById(id: Int!): Child
 
   """Fetches an object given its globally unique \`ID\`."""
@@ -10164,6 +10203,8 @@ type Query implements Node {
     """
     nodeId: ID!
   ): Organization
+
+  """Get a single \`Organization\`."""
   organizationById(id: Int!): Organization
 
   """Reads a single \`OtherChild\` using its globally unique \`ID\`."""
@@ -10173,6 +10214,8 @@ type Query implements Node {
     """
     nodeId: ID!
   ): OtherChild
+
+  """Get a single \`OtherChild\`."""
   otherChildById(id: Int!): OtherChild
 
   """Reads a single \`Parent\` using its globally unique \`ID\`."""
@@ -10180,6 +10223,8 @@ type Query implements Node {
     """The globally unique \`ID\` to be used in selecting a single \`Parent\`."""
     nodeId: ID!
   ): Parent
+
+  """Get a single \`Parent\`."""
   parentById(id: Int!): Parent
 
   """
@@ -10231,7 +10276,7 @@ type UpdateChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -10300,7 +10345,7 @@ type UpdateOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -10357,7 +10402,7 @@ type UpdateOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -10417,7 +10462,7 @@ type UpdateParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -10425,7 +10470,6 @@ type UpdateParentPayload {
   """
   query: Query
 }
-
 `;
 
 exports[`status schema matches snapshot 1`] = `
@@ -10517,7 +10561,7 @@ type ChildrenConnection {
   """
   A list of edges which contains the \`Child\` and cursor to aid in pagination.
   """
-  edges: [ChildrenEdge!]!
+  edges: [ChildrenEdge]!
 
   """A list of \`Child\` objects."""
   nodes: [Child]!
@@ -10583,7 +10627,7 @@ type CreateChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -10630,7 +10674,7 @@ type CreateOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -10665,7 +10709,7 @@ type CreateOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -10703,7 +10747,7 @@ type CreateParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -10717,7 +10761,10 @@ scalar Cursor
 
 """
 A point in time as described by the [ISO
-8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
+8601](https://en.wikipedia.org/wiki/ISO_8601) and, if it has a timezone, [RFC
+3339](https://datatracker.ietf.org/doc/html/rfc3339) standards. Input values
+that do not conform to both ISO 8601 and RFC 3339 may be coerced, which may lead
+to unexpected results.
 """
 scalar Datetime
 
@@ -10753,7 +10800,7 @@ type DeleteChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -10814,7 +10861,7 @@ type DeleteOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -10862,7 +10909,7 @@ type DeleteOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -10913,7 +10960,7 @@ type DeleteParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -10932,8 +10979,7 @@ enum IncludeStatusArchivedOption {
   EXCLUSIVELY
 
   """
-  If there is a parent GraphQL record and it is statusArchived then this is
-  equivalent to YES, in all other cases this is equivalent to NO.
+  If there is a parent GraphQL record and it is statusArchived then this is equivalent to YES, in all other cases this is equivalent to NO.
   """
   INHERIT
 
@@ -11268,7 +11314,7 @@ type OrganizationsConnection {
   """
   A list of edges which contains the \`Organization\` and cursor to aid in pagination.
   """
-  edges: [OrganizationsEdge!]!
+  edges: [OrganizationsEdge]!
 
   """A list of \`Organization\` objects."""
   nodes: [Organization]!
@@ -11360,7 +11406,7 @@ type OtherChildrenConnection {
   """
   A list of edges which contains the \`OtherChild\` and cursor to aid in pagination.
   """
-  edges: [OtherChildrenEdge!]!
+  edges: [OtherChildrenEdge]!
 
   """A list of \`OtherChild\` objects."""
   nodes: [OtherChild]!
@@ -11611,7 +11657,7 @@ type ParentsConnection {
   """
   A list of edges which contains the \`Parent\` and cursor to aid in pagination.
   """
-  edges: [ParentsEdge!]!
+  edges: [ParentsEdge]!
 
   """A list of \`Parent\` objects."""
   nodes: [Parent]!
@@ -11904,6 +11950,8 @@ type Query implements Node {
     """The globally unique \`ID\` to be used in selecting a single \`Child\`."""
     nodeId: ID!
   ): Child
+
+  """Get a single \`Child\`."""
   childById(id: Int!): Child
 
   """Fetches an object given its globally unique \`ID\`."""
@@ -11924,6 +11972,8 @@ type Query implements Node {
     """
     nodeId: ID!
   ): Organization
+
+  """Get a single \`Organization\`."""
   organizationById(id: Int!): Organization
 
   """Reads a single \`OtherChild\` using its globally unique \`ID\`."""
@@ -11933,6 +11983,8 @@ type Query implements Node {
     """
     nodeId: ID!
   ): OtherChild
+
+  """Get a single \`OtherChild\`."""
   otherChildById(id: Int!): OtherChild
 
   """Reads a single \`Parent\` using its globally unique \`ID\`."""
@@ -11940,6 +11992,8 @@ type Query implements Node {
     """The globally unique \`ID\` to be used in selecting a single \`Parent\`."""
     nodeId: ID!
   ): Parent
+
+  """Get a single \`Parent\`."""
   parentById(id: Int!): Parent
 
   """
@@ -11991,7 +12045,7 @@ type UpdateChildPayload {
   """An edge for our \`Child\`. May be used by Relay 1."""
   childEdge(
     """The method to use when ordering \`Child\`."""
-    orderBy: [ChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ChildrenEdge
 
   """
@@ -12060,7 +12114,7 @@ type UpdateOrganizationPayload {
   """An edge for our \`Organization\`. May be used by Relay 1."""
   organizationEdge(
     """The method to use when ordering \`Organization\`."""
-    orderBy: [OrganizationsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OrganizationsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OrganizationsEdge
 
   """
@@ -12117,7 +12171,7 @@ type UpdateOtherChildPayload {
   """An edge for our \`OtherChild\`. May be used by Relay 1."""
   otherChildEdge(
     """The method to use when ordering \`OtherChild\`."""
-    orderBy: [OtherChildrenOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [OtherChildrenOrderBy!]! = [PRIMARY_KEY_ASC]
   ): OtherChildrenEdge
 
   """Reads a single \`Parent\` that is related to this \`OtherChild\`."""
@@ -12177,7 +12231,7 @@ type UpdateParentPayload {
   """An edge for our \`Parent\`. May be used by Relay 1."""
   parentEdge(
     """The method to use when ordering \`Parent\`."""
-    orderBy: [ParentsOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ParentsOrderBy!]! = [PRIMARY_KEY_ASC]
   ): ParentsEdge
 
   """
@@ -12185,5 +12239,4 @@ type UpdateParentPayload {
   """
   query: Query
 }
-
 `;
