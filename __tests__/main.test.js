@@ -177,7 +177,7 @@ comment on constraint fk_children_parents on omit_archived.children is E'@archiv
           postgraphilePresetAmber,
           makeV4Preset({
             simpleCollections: "both",
-            ...graphileBuildOptions,
+            graphileBuildOptions,
           }),
         ],
         plugins: [keyword ? custom(keyword) : omitArchivedDefault],
