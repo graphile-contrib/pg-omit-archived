@@ -1,13 +1,16 @@
 {
   "extends": "@tsconfig/node16/tsconfig.json",
   "compilerOptions": {
+    "noEmit": true,
     "allowJs": true,
+    "module": "commonjs",
     "moduleResolution": "nodenext",
-    "rootDir": "src",
-    "outDir": "dist",
-    "declarationDir": "dist",
+    "rootDir": "..",
+    "outDir": ".",
+    "declarationDir": ".",
     "declaration": true,
     "sourceMap": true
   },
-  "include": ["src"]
+  "exclude": [],
+  "include": ["../src", "."]
 }
