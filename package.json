@@ -23,21 +23,21 @@
     "graphile-utils": "^5.0.0-alpha.0"
   },
   "peerDependencies": {
-    "@dataplan/pg": "^0.0.1-alpha.10",
-    "graphile-build-pg": "^5.0.0-alpha.0",
+    "@dataplan/pg": "^0.0.1-alpha.11",
+    "graphile-build-pg": "^5.0.0-alpha.12",
     "graphile-config": "^0.0.1-alpha.4",
-    "postgraphile": "^5.0.0-alpha.0"
+    "postgraphile": "^5.0.0-alpha.12"
   },
   "devDependencies": {
-    "@dataplan/pg": "^0.0.1-alpha.10",
+    "@dataplan/pg": "^0.0.1-alpha.11",
     "@tsconfig/node16": "^1.0.0",
-    "graphile-build-pg": "^5.0.0-alpha.0",
+    "graphile-build-pg": "^5.0.0-alpha.12",
     "graphile-config": "^0.0.1-alpha.4",
-    "graphql": "16.x",
+    "graphql": "^16.1.0-experimental-stream-defer.6",
     "jest": "^28.1.3",
     "jest-serializer-graphql-schema": "^5.0.0-alpha.0",
     "pg": "8.x",
-    "postgraphile": "^5.0.0-alpha.0",
+    "postgraphile": "^5.0.0-alpha.12",
     "prettier": "^2.2.1",
     "typescript": "^5.0.0"
   },
