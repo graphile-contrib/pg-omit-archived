@@ -14,7 +14,6 @@ import type {
   PgRegistry,
   PgSelectStep,
 } from "@dataplan/pg";
-import { TYPES, PgSelectSingleStep } from "@dataplan/pg";
 
 declare global {
   namespace GraphileBuild {
@@ -108,6 +107,7 @@ const makeUtils = (
   const {
     inflection,
     getTypeByName,
+    dataplanPg: { TYPES, PgSelectSingleStep },
     options: {
       [`pg${Keyword}ColumnName` as "pgArchivedColumnName"]:
         columnNameToCheck = `is_${keyword}`,
