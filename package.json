@@ -1,6 +1,6 @@
 {
   "name": "@graphile-contrib/pg-omit-archived",
-  "version": "4.0.0-alpha.1",
+  "version": "4.0.0-alpha.2",
   "description": "Makes collections omit archived items by default, but gives the ability to view archived items if explicitly requested.",
   "main": "dist/index.js",
   "scripts": {
