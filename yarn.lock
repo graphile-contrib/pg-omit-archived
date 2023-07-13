@@ -1254,16 +1254,6 @@ graphile-config@^0.0.1-alpha.6:
     tslib "^2.5.0"
     yargs "^17.4.1"
 
-graphile-utils@^5.0.0-alpha.14:
-  version "5.0.0-alpha.14"
-  resolved "https://registry.yarnpkg.com/graphile-utils/-/graphile-utils-5.0.0-alpha.14.tgz#5e3f07baed5248d17c7840affdb67c962277a550"
-  integrity sha512-qXTVXNi1Aa4eVZQxiEoi5PRQSMxmbUG7sd+3S+M/lIBpo1EwT/3K6/TOQ53G1UIbdaQsb7pzMsHVh9PhmviJZw==
-  dependencies:
-    debug "^4.1.1"
-    graphile-config "^0.0.1-alpha.6"
-    json5 "^2.2.3"
-    tslib "^2.5.0"
-
 graphql-ws@^5.11.3:
   version "5.13.1"
   resolved "https://registry.yarnpkg.com/graphql-ws/-/graphql-ws-5.13.1.tgz#96ac9963edb1e94c8e7f21af48ce5fcaab91779a"
@@ -1811,7 +1801,7 @@ json-parse-even-better-errors@^2.3.0:
   resolved "https://registry.yarnpkg.com/json-parse-even-better-errors/-/json-parse-even-better-errors-2.3.1.tgz#7c47805a94319928e05777405dc12e1f7a4ee02d"
   integrity sha512-xyFwyhro/JEof6Ghe2iz2NcXoj2sloNsWr/XsERDK/oiPCfaNhl5ONfp+jQdAZRQQ0IJWNzH9zIZF7li91kh2w==
 
-json5@^2.2.2, json5@^2.2.3:
+json5@^2.2.2:
   version "2.2.3"
   resolved "https://registry.yarnpkg.com/json5/-/json5-2.2.3.tgz#78cd6f1a19bdc12b73db5ad0c61efd66c1e29283"
   integrity sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==
