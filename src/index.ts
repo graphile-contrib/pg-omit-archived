@@ -578,9 +578,9 @@ const generator = (keyword = "archived"): GraphileConfig.Plugin => {
   };
 };
 
-const Plugin = Object.assign(generator(), {
+const PgOmitArchivedPlugin = Object.assign(generator(), {
   custom: generator,
   makeUtils,
 });
-export default Plugin;
-export { generator as custom, makeUtils };
+export default PgOmitArchivedPlugin;
+export { generator as custom, makeUtils, PgOmitArchivedPlugin };
