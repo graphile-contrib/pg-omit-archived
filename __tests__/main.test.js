@@ -1,19 +1,12 @@
 // @ts-check
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+/* eslint-disable @typescript-eslint/no-var-requires */
 const { lexicographicSortSchema } = require("graphql");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { grafast } = require("grafast");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const pg = require("pg");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { makeSchema } = require("postgraphile");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { postgraphilePresetAmber } = require("postgraphile/presets/amber");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { makeV4Preset } = require("postgraphile/presets/v4");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { default: omitArchivedDefault, custom } = require("..");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { makePgService } = require("@dataplan/pg/adaptors/pg");
 
 /*
