@@ -6,7 +6,8 @@
   "scripts": {
     "prepack": "rm -Rf dist && yarn build",
     "build": "tsc",
-    "test": "tsc && jest"
+    "test": "tsc && jest",
+    "lint": "eslint ."
   },
   "keywords": [
     "postgraphile",
