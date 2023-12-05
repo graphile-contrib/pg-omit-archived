@@ -540,7 +540,7 @@ const generator = (keyword = "archived"): GraphileConfig.Plugin => {
               capableOfInherit,
               argumentName,
             } = utils;
-            if (!!args[argumentName]) {
+            if (args[argumentName]) {
               return args;
             }
 

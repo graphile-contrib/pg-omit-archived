@@ -1,4 +1,5 @@
 // @ts-check
+/* eslint-disable @typescript-eslint/no-var-requires */
 const { lexicographicSortSchema } = require("graphql");
 const { grafast } = require("grafast");
 const pg = require("pg");
