@@ -5,6 +5,7 @@
  */
 
 import type {} from "graphile-config";
+import type {} from "graphile-build";
 import type {} from "graphile-build-pg";
 import type { PgSQL, SQL } from "pg-sql2";
 import type { ConnectionStep, FieldArgs, ExecutableStep } from "grafast";
