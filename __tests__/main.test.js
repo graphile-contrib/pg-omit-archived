@@ -201,20 +201,18 @@ comment on constraint fk_children_parents on omit_archived.children is E'@archiv
     /** @type {(query: string, expected: any, checker?: (arg: import("graphql").ExecutionResult) => void) => () => Promise<void>} */
     function check(query, expected, checker) {
       return async () => {
-        const result = /** @type {import('graphql').ExecutionResult} */ (
-          await grafast(
-            {
-              schema,
-              source: query,
-              rootValue: null,
-              contextValue: {},
-              variableValues: {},
-              operationName: null,
-            },
-            resolvedPreset,
-            {},
-          )
-        );
+        const result = /** @type {import('graphql').ExecutionResult} */ (await grafast(
+          {
+            schema,
+            source: query,
+            rootValue: null,
+            contextValue: {},
+            variableValues: {},
+            operationName: null,
+          },
+          resolvedPreset,
+          {},
+        ));
         if (checker) {
           checker(result);
         } else {
@@ -867,6 +865,7 @@ comment on constraint fk_children_parents on omit_archived.children is E'@archiv
     });
 
     if (pgArchivedRelations) {
+      // eslint-disable-next-line jest/valid-title
       describe(pgRelationsAttr, () => {
         it(
           "Defaults to omitting other_children where parent is archived",
