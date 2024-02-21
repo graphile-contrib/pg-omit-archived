@@ -110,11 +110,14 @@ const makeUtils = (
     getTypeByName,
     dataplanPg: { TYPES, PgSelectSingleStep },
     options: {
-      [`pg${Keyword}ColumnName` as "pgArchivedColumnName"]: columnNameToCheck = `is_${keyword}`,
+      [`pg${Keyword}ColumnName` as "pgArchivedColumnName"]:
+        columnNameToCheck = `is_${keyword}`,
       // If true inverts the omitting logic (e.g. true for `is_published` or
       // `published_at`; false for `is_archived` or `archived_at`).
-      [`pg${Keyword}ColumnImpliesVisible` as "pgArchivedColumnImpliesVisible"]: invert = false,
-      [`pg${Keyword}Relations` as "pgArchivedRelations"]: applyToRelations = false,
+      [`pg${Keyword}ColumnImpliesVisible` as "pgArchivedColumnImpliesVisible"]:
+        invert = false,
+      [`pg${Keyword}Relations` as "pgArchivedRelations"]:
+        applyToRelations = false,
       [`pg${Keyword}Expression` as "pgArchivedExpression"]: expression = null,
       [`pg${Keyword}Tables` as "pgArchivedTables"]: rawTables = null,
     },
@@ -295,13 +298,11 @@ const makeUtils = (
       : parentTableRelevantColumnDetails
       ? {
           expression: build.EXPORTABLE(
-            (parentTableRelevantColumnDetails, sql) => (
-              _sql: typeof sql,
-              tableAlias: SQL,
-            ) =>
-              sql.fragment`${tableAlias}.${sql.identifier(
-                parentTableRelevantColumnDetails.columnName,
-              )}`,
+            (parentTableRelevantColumnDetails, sql) =>
+              (_sql: typeof sql, tableAlias: SQL) =>
+                sql.fragment`${tableAlias}.${sql.identifier(
+                  parentTableRelevantColumnDetails.columnName,
+                )}`,
             [parentTableRelevantColumnDetails, sql],
           ),
           visibleFragment: pgParentRelevantColumnIsBoolean
@@ -316,102 +317,105 @@ const makeUtils = (
 
   const addWhereClause = build.EXPORTABLE(
     (
-      PgSelectSingleStep,
-      TYPES,
-      capableOfInherit,
-      defaultValue,
-      localDetails,
-      parentDetails,
-      parentTable,
-      relevantClass,
-      relevantRelation,
-      sql,
-      table,
-    ) => (
-      $parent: ExecutableStep,
-      $select: PgSelectStep,
-      fieldArgs: FieldArgs,
-    ) => {
-      const $parentSelectSingle =
-        $parent instanceof PgSelectSingleStep ? $parent : null;
-      // TODO: don't eval?
-      const relevantSetting = fieldArgs.getRaw().eval();
-      let fragment: SQL | null = null;
+        PgSelectSingleStep,
+        TYPES,
+        capableOfInherit,
+        defaultValue,
+        localDetails,
+        parentDetails,
+        parentTable,
+        relevantClass,
+        relevantRelation,
+        sql,
+        table,
+      ) =>
+      (
+        $parent: ExecutableStep,
+        $select: PgSelectStep,
+        fieldArgs: FieldArgs,
+      ) => {
+        const $parentSelectSingle =
+          $parent instanceof PgSelectSingleStep ? $parent : null;
+        // TODO: don't eval?
+        const relevantSetting = fieldArgs.getRaw().eval();
+        let fragment: SQL | null = null;
 
-      const myAlias =
-        relevantClass !== table ? sql.identifier(Symbol("me")) : $select.alias;
-      if (
-        relevantRelation &&
-        relevantClass !== table &&
-        relevantRelation.remoteResource.codec === parentTable &&
-        capableOfInherit &&
-        $parentSelectSingle &&
-        parentDetails &&
-        ["INHERIT", "YES"].includes(relevantSetting)
-      ) {
-        // In this case the work is already done by the parent record and it
-        // cannot be overridden by this level (since we don't have the relevant
-        // field and we just import ours from the parent); no need to add
-        // any extra WHERE clauses.
-        return;
-      }
-      // INHERIT is equivalent to defaultValue if there's no valid parent
-      const relevantSettingIfNotInherit =
-        relevantSetting !== "INHERIT"
-          ? relevantSetting
-          : defaultValue !== "INHERIT"
-          ? defaultValue
-          : "NO";
-      if (
-        capableOfInherit &&
-        relevantSetting === "INHERIT" &&
-        $parentSelectSingle &&
-        parentDetails
-      ) {
-        const $parentResult = $parentSelectSingle.select(
-          parentDetails.expression(
-            sql,
-            $parentSelectSingle.getClassStep().alias,
-          ),
-          TYPES.boolean,
-        );
-        fragment = sql.fragment`(${$select.placeholder($parentResult)} is ${
-          parentDetails.invisibleFragment
-        } or ${localDetails.expression(sql, myAlias)} is ${
-          localDetails.visibleFragment
-        })`;
-      } else if (relevantSettingIfNotInherit === "NO") {
-        fragment = sql.fragment`${localDetails.expression(sql, myAlias)} is ${
-          localDetails.visibleFragment
-        }`;
-      } else if (relevantSettingIfNotInherit === "EXCLUSIVELY") {
-        fragment = sql.fragment`${localDetails.expression(sql, myAlias)} is ${
-          localDetails.invisibleFragment
-        }`;
-      }
-      if (fragment) {
-        if (relevantRelation && relevantClass !== table) {
-          const localAlias = $select.alias;
-          const relationConditions = relevantRelation.localAttributes.map(
-            (attrName, i) => {
-              const otherAttrName = relevantRelation.remoteAttributes[i];
-              return sql.fragment`${localAlias}.${sql.identifier(
-                attrName,
-              )} = ${myAlias}.${sql.identifier(otherAttrName)}`;
-            },
-          );
-          const subquery = sql.fragment`exists (select 1 from ${
-            relevantRelation.remoteResource.from as SQL
-          } as ${myAlias} where (${sql.join(
-            relationConditions,
-            ") and (",
-          )}) and (${fragment}))`;
-          $select.where(subquery);
-        } else {
-          $select.where(fragment);
+        const myAlias =
+          relevantClass !== table
+            ? sql.identifier(Symbol("me"))
+            : $select.alias;
+        if (
+          relevantRelation &&
+          relevantClass !== table &&
+          relevantRelation.remoteResource.codec === parentTable &&
+          capableOfInherit &&
+          $parentSelectSingle &&
+          parentDetails &&
+          ["INHERIT", "YES"].includes(relevantSetting)
+        ) {
+          // In this case the work is already done by the parent record and it
+          // cannot be overridden by this level (since we don't have the relevant
+          // field and we just import ours from the parent); no need to add
+          // any extra WHERE clauses.
+          return;
         }
-      }
-    },
+        // INHERIT is equivalent to defaultValue if there's no valid parent
+        const relevantSettingIfNotInherit =
+          relevantSetting !== "INHERIT"
+            ? relevantSetting
+            : defaultValue !== "INHERIT"
+            ? defaultValue
+            : "NO";
+        if (
+          capableOfInherit &&
+          relevantSetting === "INHERIT" &&
+          $parentSelectSingle &&
+          parentDetails
+        ) {
+          const $parentResult = $parentSelectSingle.select(
+            parentDetails.expression(
+              sql,
+              $parentSelectSingle.getClassStep().alias,
+            ),
+            TYPES.boolean,
+          );
+          fragment = sql.fragment`(${$select.placeholder($parentResult)} is ${
+            parentDetails.invisibleFragment
+          } or ${localDetails.expression(sql, myAlias)} is ${
+            localDetails.visibleFragment
+          })`;
+        } else if (relevantSettingIfNotInherit === "NO") {
+          fragment = sql.fragment`${localDetails.expression(sql, myAlias)} is ${
+            localDetails.visibleFragment
+          }`;
+        } else if (relevantSettingIfNotInherit === "EXCLUSIVELY") {
+          fragment = sql.fragment`${localDetails.expression(sql, myAlias)} is ${
+            localDetails.invisibleFragment
+          }`;
+        }
+        if (fragment) {
+          if (relevantRelation && relevantClass !== table) {
+            const localAlias = $select.alias;
+            const relationConditions = relevantRelation.localAttributes.map(
+              (attrName, i) => {
+                const otherAttrName = relevantRelation.remoteAttributes[i];
+                return sql.fragment`${localAlias}.${sql.identifier(
+                  attrName,
+                )} = ${myAlias}.${sql.identifier(otherAttrName)}`;
+              },
+            );
+            const subquery = sql.fragment`exists (select 1 from ${
+              relevantRelation.remoteResource.from as SQL
+            } as ${myAlias} where (${sql.join(
+              relationConditions,
+              ") and (",
+            )}) and (${fragment}))`;
+            $select.where(subquery);
+          } else {
+            $select.where(fragment);
+          }
+        }
+      },
     [
       PgSelectSingleStep,
       TYPES,
@@ -598,24 +602,26 @@ const generator = (keyword = "archived"): GraphileConfig.Plugin => {
                   autoApplyAfterParentPlan: true,
                   applyPlan: isPgFieldConnection
                     ? build.EXPORTABLE(
-                        (addWhereClause) => (
-                          $parent: ExecutableStep,
-                          $connection: ConnectionStep<any, any, PgSelectStep>,
-                          arg: FieldArgs,
-                        ) => {
-                          const $select = $connection.getSubplan();
-                          addWhereClause($parent, $select, arg);
-                        },
+                        (addWhereClause) =>
+                          (
+                            $parent: ExecutableStep,
+                            $connection: ConnectionStep<any, any, PgSelectStep>,
+                            arg: FieldArgs,
+                          ) => {
+                            const $select = $connection.getSubplan();
+                            addWhereClause($parent, $select, arg);
+                          },
                         [addWhereClause],
                       )
                     : build.EXPORTABLE(
-                        (addWhereClause) => (
-                          $parent: ExecutableStep,
-                          $select: PgSelectStep,
-                          arg: FieldArgs,
-                        ) => {
-                          addWhereClause($parent, $select, arg);
-                        },
+                        (addWhereClause) =>
+                          (
+                            $parent: ExecutableStep,
+                            $select: PgSelectStep,
+                            arg: FieldArgs,
+                          ) => {
+                            addWhereClause($parent, $select, arg);
+                          },
                         [addWhereClause],
                       ),
                 },
