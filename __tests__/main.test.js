@@ -867,6 +867,7 @@ comment on constraint fk_children_parents on omit_archived.children is E'@archiv
     });
 
     if (pgArchivedRelations) {
+      // eslint-disable-next-line jest/valid-title
       describe(pgRelationsAttr, () => {
         it(
           "Defaults to omitting other_children where parent is archived",
