@@ -85,7 +85,7 @@ function iderize(...ids) {
 let pgPool;
 beforeAll(() => {
   pgPool = new pg.Pool({
-    connectionString: process.env.TEST_DATABASE_URL || "pggql_test",
+    connectionString: process.env.TEST_DATABASE_URL || "postgres:///pggql_test",
   });
 });
 afterAll(() => pgPool.end());
