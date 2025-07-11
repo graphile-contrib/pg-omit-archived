@@ -340,6 +340,7 @@ const makeUtils = (
         relevantRelation,
         sql,
         table,
+        lambda
       ) =>
       ($parent: ExecutableStep, $select: PgSelectStep, fieldArgs: FieldArg) => {
         const $parentSelectSingle =
@@ -450,6 +451,7 @@ const makeUtils = (
       relevantRelation,
       sql,
       table,
+      lambda
     ],
   );
 
