@@ -1,7 +1,7 @@
 // @ts-check
 import js from "@eslint/js";
 import tsParser from "@typescript-eslint/parser";
-import { defineConfig } from "eslint/config";
+import { defineConfig, globalIgnores } from "eslint/config";
 import prettier from "eslint-config-prettier";
 import graphileExport from "eslint-plugin-graphile-export";
 import jest from "eslint-plugin-jest";
@@ -33,4 +33,5 @@ export default defineConfig([
       "@typescript-eslint/no-namespace": ["off"],
     },
   },
+  globalIgnores(["dist/**", ".yarn/**"]),
 ]);
