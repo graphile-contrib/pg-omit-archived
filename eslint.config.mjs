@@ -31,6 +31,13 @@ export default defineConfig([
     rules: {
       "jest/expect-expect": ["off"],
       "@typescript-eslint/no-namespace": ["off"],
+      "@typescript-eslint/no-explicit-any": ["warn"],
+    },
+  },
+  {
+    files: ["__tests__/*.d.ts"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["off"],
     },
   },
   globalIgnores(["dist/**", ".yarn/**"]),

@@ -1,5 +1,5 @@
 // @ts-check
-/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { lexicographicSortSchema } = require("graphql");
 const { grafast } = require("grafast");
 const pg = require("pg");
@@ -867,7 +867,6 @@ comment on constraint fk_children_parents on omit_archived.children is E'@archiv
     });
 
     if (pgArchivedRelations) {
-      // eslint-disable-next-line jest/valid-title
       describe(pgRelationsAttr, () => {
         it(
           "Defaults to omitting other_children where parent is archived",
