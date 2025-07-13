@@ -8,12 +8,7 @@ import type {} from "graphile-config";
 import type {} from "graphile-build";
 import type {} from "graphile-build-pg";
 import type { PgSQL, SQL } from "pg-sql2";
-import type {
-  ConnectionStep,
-  FieldArgs,
-  ExecutableStep,
-  FieldArg,
-} from "grafast";
+import type { ConnectionStep, ExecutableStep, FieldArg, Step } from "grafast";
 import type {
   PgCodecRelation,
   PgCodecWithAttributes,
@@ -624,7 +619,11 @@ const generator = (keyword = "archived"): GraphileConfig.Plugin => {
                         (addWhereClause) =>
                           (
                             $parent: ExecutableStep,
-                            $connection: ConnectionStep<any, any, PgSelectStep>,
+                            $connection: ConnectionStep<
+                              Step,
+                              Step,
+                              PgSelectStep
+                            >,
                             arg: FieldArg,
                           ) => {
                             const $select = $connection.getSubplan();
