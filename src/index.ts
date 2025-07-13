@@ -274,22 +274,23 @@ const makeUtils = (
         }
       : null
     : relevantColumnDetails
-    ? {
-        expression: build.EXPORTABLE(
-          (relevantColumnDetails, sql) => (_sql: typeof sql, tableAlias: SQL) =>
-            sql.fragment`${tableAlias}.${sql.identifier(
-              relevantColumnDetails.columnName,
-            )}`,
-          [relevantColumnDetails, sql],
-        ),
-        visibleFragment: pgRelevantColumnIsBoolean
-          ? booleanVisibleFragment
-          : nullableVisibleFragment,
-        invisibleFragment: pgRelevantColumnIsBoolean
-          ? booleanInvisibleFragment
-          : nullableInvisibleFragment,
-      }
-    : null;
+      ? {
+          expression: build.EXPORTABLE(
+            (relevantColumnDetails, sql) =>
+              (_sql: typeof sql, tableAlias: SQL) =>
+                sql.fragment`${tableAlias}.${sql.identifier(
+                  relevantColumnDetails.columnName,
+                )}`,
+            [relevantColumnDetails, sql],
+          ),
+          visibleFragment: pgRelevantColumnIsBoolean
+            ? booleanVisibleFragment
+            : nullableVisibleFragment,
+          invisibleFragment: pgRelevantColumnIsBoolean
+            ? booleanInvisibleFragment
+            : nullableInvisibleFragment,
+        }
+      : null;
 
   if (!rawLocalDetails) {
     return null;
@@ -308,39 +309,39 @@ const makeUtils = (
           invisibleFragment: booleanInvisibleFragment,
         }
       : parentTableRelevantColumnDetails
-      ? {
-          expression: build.EXPORTABLE(
-            (parentTableRelevantColumnDetails, sql) =>
-              (_sql: typeof sql, tableAlias: SQL) =>
-                sql.fragment`${tableAlias}.${sql.identifier(
-                  parentTableRelevantColumnDetails.columnName,
-                )}`,
-            [parentTableRelevantColumnDetails, sql],
-          ),
-          visibleFragment: pgParentRelevantColumnIsBoolean
-            ? booleanVisibleFragment
-            : nullableVisibleFragment,
-          invisibleFragment: pgParentRelevantColumnIsBoolean
-            ? booleanInvisibleFragment
-            : nullableInvisibleFragment,
-        }
-      : null
+        ? {
+            expression: build.EXPORTABLE(
+              (parentTableRelevantColumnDetails, sql) =>
+                (_sql: typeof sql, tableAlias: SQL) =>
+                  sql.fragment`${tableAlias}.${sql.identifier(
+                    parentTableRelevantColumnDetails.columnName,
+                  )}`,
+              [parentTableRelevantColumnDetails, sql],
+            ),
+            visibleFragment: pgParentRelevantColumnIsBoolean
+              ? booleanVisibleFragment
+              : nullableVisibleFragment,
+            invisibleFragment: pgParentRelevantColumnIsBoolean
+              ? booleanInvisibleFragment
+              : nullableInvisibleFragment,
+          }
+        : null
     : null;
 
   const addWhereClause = build.EXPORTABLE(
     (
-        PgSelectSingleStep,
-        TYPES,
-        capableOfInherit,
-        defaultValue,
-        localDetails,
-        parentDetails,
-        parentTable,
-        relevantClass,
-        relevantRelation,
-        sql,
-        table,
-      ) =>
+      PgSelectSingleStep,
+      TYPES,
+      capableOfInherit,
+      defaultValue,
+      localDetails,
+      parentDetails,
+      parentTable,
+      relevantClass,
+      relevantRelation,
+      sql,
+      table,
+    ) =>
       ($parent: ExecutableStep, $select: PgSelectStep, fieldArgs: FieldArg) => {
         const $parentSelectSingle =
           $parent instanceof PgSelectSingleStep ? $parent : null;
@@ -387,8 +388,8 @@ const makeUtils = (
                 relevantSetting !== "INHERIT"
                   ? relevantSetting
                   : defaultValue !== "INHERIT"
-                  ? defaultValue
-                  : "NO";
+                    ? defaultValue
+                    : "NO";
               if (
                 capableOfInherit &&
                 relevantSetting === "INHERIT" &&
