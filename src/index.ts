@@ -624,6 +624,9 @@ const generator = (keyword = "archived"): GraphileConfig.Plugin => {
                             $connection: ConnectionStep<
                               Step,
                               Step,
+                              Step,
+                              any,
+                              Step,
                               PgSelectStep
                             >,
                             arg: FieldArg,
