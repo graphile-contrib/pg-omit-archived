@@ -4,7 +4,7 @@ const { lexicographicSortSchema } = require("graphql");
 const { grafast } = require("grafast");
 const pg = require("pg");
 const { makeSchema } = require("postgraphile");
-const { postgraphilePresetAmber } = require("postgraphile/presets/amber");
+const { PostGraphileAmberPreset } = require("postgraphile/presets/amber");
 const { makeV4Preset } = require("postgraphile/presets/v4");
 const { default: omitArchivedDefault, custom } = require("..");
 const { makePgService } = require("@dataplan/pg/adaptors/pg");
@@ -175,7 +175,7 @@ comment on constraint fk_children_parents on omit_archived.children is E'@archiv
       /** @type {GraphileConfig.Preset} */
       const preset = {
         extends: [
-          postgraphilePresetAmber,
+          PostGraphileAmberPreset,
           makeV4Preset({
             simpleCollections: "both",
             graphileBuildOptions,
