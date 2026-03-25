@@ -75,10 +75,16 @@ const preset: GraphileConfig.Preset = {
     }),
   ],
   schema: {
+    /* -------- Options for 'archived' -------- */
+    // Boolean column -> checked as "IS NOT TRUE":
     pgArchivedColumnName: "is_archived",
+    // When true, hide; when false, visible:
     pgArchivedColumnImpliesVisible: false,
+    // Only add includeArchived to tables with is_archived column:
     pgArchivedRelations: false,
+    // Default plural relation fields to INHERIT:
     pgArchivedDefaultInherit: true,
+    // Exclude archived by default:
     pgArchivedDefault: "NO",
   },
 };
@@ -92,30 +98,45 @@ all of the options are based on this keyword so you can configure each plugin
 individually (we also look for the column `is_${keyword}`). For example:
 
 ```ts
-import { custom } from "@graphile-contrib/pg-omit-archived";
+import { custom as customPgOmitArchived } from "@graphile-contrib/pg-omit-archived";
 
 const preset: GraphileConfig.Preset = {
   extends: [PostGraphileAmberPreset],
   plugins: [
-    custom("archived"),
-    custom("deleted"),
-    custom("template"),
-    custom("draft"),
+    customPgOmitArchived("archived"),
+    customPgOmitArchived("deleted"),
+    customPgOmitArchived("template"),
+    customPgOmitArchived("draft"), // e.g. draft vs published
   ],
   schema: {
+    /* -------- Options for 'archived' -------- */
+    // Boolean column -> checked as "IS NOT TRUE":
     pgArchivedColumnName: "is_archived",
+    // When true, hide; when false, visible:
     pgArchivedColumnImpliesVisible: false,
+    // Only add includeArchived to tables with is_archived column:
     pgArchivedRelations: false,
+    // Exclude archived by default:
     pgArchivedDefault: "NO",
 
+    /* -------- Options for 'deleted' -------- */
+    // Non-boolean column -> checked as "IS NULL":
     pgDeletedColumnName: "deleted_at",
+    // Also add includeDeleted to tables which belong to a table with
+    // deleted_at column:
     pgDeletedRelations: true,
 
+    /* -------- Options for 'template' -------- */
     pgTemplateColumnName: "is_template",
+    // Include templates by default:
     pgTemplateDefault: "YES",
+    // Don't default to INHERIT even if we could:
     pgTemplateDefaultInherit: false,
 
+    /* -------- Options for 'draft' -------- */
+    // Column name doesn't have to match keyword name:
     pgDraftColumnName: "is_published",
+    // When true -> published -> visible; when false -> unpublished -> hidden:
     pgDraftColumnImpliesVisible: true,
   },
 };
@@ -170,11 +191,16 @@ To use this, instead of setting `pgArchivedColumnName` you can specify both:
   expression applies to (since we can't determine this automatically)
 
 ```ts
+import { custom as customPgOmitArchived } from "@graphile-contrib/pg-omit-archived";
+
 const preset: GraphileConfig.Preset = {
   extends: [PostGraphileAmberPreset],
-  plugins: [custom("archived")],
+  plugins: [customPgOmitArchived("archived")],
   schema: {
+    // What tables does the expression apply to?
     pgArchivedTables: ["my_schema.my_table"],
+
+    // SQL expression that returns true if the row should be omitted
     pgArchivedExpression: (sql, tableAlias) =>
       sql.fragment`${tableAlias}.status = 'archived'`,
   },
