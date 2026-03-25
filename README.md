@@ -1,6 +1,6 @@
 # @graphile-contrib/pg-omit-archived
 
-This Graphile Engine plugin can be used to give your schema support for
+This plugin can be used to give your schema support for
 "soft-deletes" - where you set an `is_archived` or `is_deleted` column to true
 and expect the record to be omitted by default (but it's still available to be
 recovered should you need to). It's also useful for hiding certain other classes
@@ -14,7 +14,7 @@ each plugin invocation.
 
 ## Installing
 
-This requires `postgraphile@^4.5.5`.
+This requires `postgraphile@^5.0.0`.
 
 ```
 yarn add postgraphile @graphile-contrib/pg-omit-archived
@@ -25,48 +25,30 @@ yarn add postgraphile @graphile-contrib/pg-omit-archived
 ## Usage
 
 Add a column to your table to indicate whether the record should be skipped over
-by default or not, and then append this plugin to your PostGraphile options. CLI
-usage is more restrictive than library usage, so if you want more powerful
-integration we recommend you use PostGraphile in library (middleware) mode.
-
-### Usage - CLI
-
-If you're using the CLI then you must use a boolean `is_archived` column:
-
-```sql
-alter table my_table add column is_archived boolean not null default false;
-```
-
-Then append this plugin with `--append-plugins`:
-
-```
-postgraphile --append-plugins @graphile-contrib/pg-omit-archived -c postgres:///my_db
-```
-
-### Usage - Library
+by default or not, and then add this plugin to your Graphile config.
 
 **IMPORTANT**: if a nullable or boolean column is not suitable for your needs,
 please see the section on expressions below.
 
-If you're using PostGraphile in library (middleware) mode then you have more
-configuration options and you can specify a column that's _either_ boolean _or_
-nullable. A nullable timestamptz column is a popular choice:
+You can specify a column that's _either_ boolean _or_ nullable. A nullable
+`timestamptz` column is a popular choice:
 
 ```sql
 alter table my_table add column archived_at timestamptz;
 ```
 
 If you're not using a boolean `is_archived` column then you must specify the
-column name, which you can do via the `pgArchivedColumnName` option.
+column name, which you can do via the `schema.pgArchivedColumnName` option.
 
 You can also tell the plugin to invert the include/exclude logic with the
-`pgArchivedColumnImpliesVisible` option (e.g. if you're using `is_published`
+`schema.pgArchivedColumnImpliesVisible` option (e.g. if you're using
+`is_published`
 you'd set `pgArchivedColumnImpliesVisible: true` rather than the default
 `pgArchivedColumnImpliesVisible: false` which would be appropriate for
 `is_draft`). More information on this below.
 
 Another option is to have the plugin apply to related records with the
-`pgArchivedRelations: true` option - more on this below.
+`schema.pgArchivedRelations: true` option - more on this below.
 
 When the plugin detects that inheritance is possible, the default for the
 argument will be set to `INHERIT`; to disable this behavior, use
@@ -78,31 +60,30 @@ option is `EXCLUSIVELY`).
 
 Example:
 
-```js
-const express = require("express");
-const { postgraphile } = require("postgraphile");
-const {
-  default: PgOmitArchived,
-} = require("@graphile-contrib/pg-omit-archived");
+```ts
+import { makePgService } from "postgraphile/adaptors/pg";
+import { PostGraphileAmberPreset } from "postgraphile/presets/amber";
+import { PgOmitArchivedPlugin } from "@graphile-contrib/pg-omit-archived";
 
-const app = express();
+const preset: GraphileConfig.Preset = {
+  extends: [PostGraphileAmberPreset],
+  plugins: [PgOmitArchivedPlugin],
+  pgServices: [
+    makePgService({
+      connectionString: process.env.DATABASE_URL!,
+      schemas: ["app_public"],
+    }),
+  ],
+  schema: {
+    pgArchivedColumnName: "is_archived",
+    pgArchivedColumnImpliesVisible: false,
+    pgArchivedRelations: false,
+    pgArchivedDefaultInherit: true,
+    pgArchivedDefault: "NO",
+  },
+};
 
-app.use(
-  postgraphile(process.env.DATABASE_URL, "app_public", {
-    /* 👇👇👇 */
-    appendPlugins: [PgOmitArchived],
-    graphileBuildOptions: {
-      pgArchivedColumnName: "is_archived",
-      pgArchivedColumnImpliesVisible: false,
-      pgArchivedRelations: false,
-      pgArchivedDefaultInherit: true,
-      pgArchivedDefault: "NO",
-    },
-    /* ☝️☝️☝️ */
-  }),
-);
-
-app.listen(process.env.PORT || 3000);
+export default preset;
 ```
 
 You can also use the plugin multiple times for different columns using the
@@ -110,60 +91,34 @@ You can also use the plugin multiple times for different columns using the
 all of the options are based on this keyword so you can configure each plugin
 individually (we also look for the column `is_${keyword}`). For example:
 
-```js
-const express = require("express");
-const { postgraphile } = require("postgraphile");
-const {
-  custom: customPgOmitArchived,
-} = require("@graphile-contrib/pg-omit-archived");
+```ts
+import { custom } from "@graphile-contrib/pg-omit-archived";
 
-const app = express();
+const preset: GraphileConfig.Preset = {
+  extends: [PostGraphileAmberPreset],
+  plugins: [
+    custom("archived"),
+    custom("deleted"),
+    custom("template"),
+    custom("draft"),
+  ],
+  schema: {
+    pgArchivedColumnName: "is_archived",
+    pgArchivedColumnImpliesVisible: false,
+    pgArchivedRelations: false,
+    pgArchivedDefault: "NO",
 
-app.use(
-  postgraphile(process.env.DATABASE_URL, "app_public", {
-    /* 👇👇👇 */
-    appendPlugins: [
-      customPgOmitArchived("archived"),
-      customPgOmitArchived("deleted"),
-      customPgOmitArchived("template"),
-      customPgOmitArchived("draft"), // e.g. draft vs published
-    ],
-    graphileBuildOptions: {
-      /* -------- Options for 'archived' -------- */
-      // Boolean column -> checked as "IS NOT TRUE":
-      pgArchivedColumnName: "is_archived",
-      // When true, hide; when false, visible:
-      pgArchivedColumnImpliesVisible: false,
-      // Only add includeArchived to tables with is_archived column:
-      pgArchivedRelations: false,
-      // Exclude archived by default
-      pgArchivedDefault: "NO",
+    pgDeletedColumnName: "deleted_at",
+    pgDeletedRelations: true,
 
-      /* -------- Options for 'deleted' -------- */
-      // Non-boolean column -> checked as "IS NULL":
-      pgDeletedColumnName: "deleted_at",
-      // Also add includeDeleted to tables which belong to a table with
-      // deleted_at column:
-      pgArchivedRelations: true,
+    pgTemplateColumnName: "is_template",
+    pgTemplateDefault: "YES",
+    pgTemplateDefaultInherit: false,
 
-      /* -------- Options for 'template' -------- */
-      pgTemplateColumnName: "is_template",
-      // Include templates by default
-      pgTemplateDefault: "YES",
-      // Don't default to INHERIT even if we could
-      pgTemplateDefaultInherit: false,
-
-      /* -------- Options for 'draft' -------- */
-      // Column name doesn't have to match keyword name:
-      pgDraftColumnName: "is_published",
-      // When true -> published -> visible; when false -> unpublished -> hidden
-      pgDraftColumnImpliesVisible: true,
-    },
-    /* ☝️☝️☝️ */
-  }),
-);
-
-app.listen(process.env.PORT || 3000);
+    pgDraftColumnName: "is_published",
+    pgDraftColumnImpliesVisible: true,
+  },
+};
 ```
 
 ### Usage - advanced options
@@ -171,7 +126,7 @@ app.listen(process.env.PORT || 3000);
 By default we'll look for a column named after your keyword (e.g. if you use the
 'deleted' keyword, we'll look for an `is_deleted` column). You may override the
 column adding the `pg<Keyword>ColumnName: 'my_column_name_here'` (e.g.
-`pgDeletedColumnName: 'deleted_at'`) setting to `graphileBuildOptions`, where
+`pgDeletedColumnName: 'deleted_at'`) setting in the `schema` section, where
 `<Keyword>` is your keyword with the first character uppercased (see above for
 examples).
 
@@ -181,7 +136,7 @@ This plugin was built expecting to hide things when `true` (boolean) or non-null
 behaviour; e.g. if your column is `published_at` you'd want it visible when
 non-null and hidden when null. To invert the behaviour, add the
 `pg<Keyword>ColumnImpliesVisible: true` (e.g.
-`pgDraftColumnImpliesVisible: true`) setting to `graphileBuildOptions`, where
+`pgDraftColumnImpliesVisible: true`) setting in the `schema` section, where
 `<Keyword>` is your keyword with the first character uppercased (see above for
 examples).
 
@@ -215,21 +170,15 @@ To use this, instead of setting `pgArchivedColumnName` you can specify both:
   expression applies to (since we can't determine this automatically)
 
 ```ts
-app.use(
-  postgraphile(process.env.DATABASE_URL, "app_public", {
-    appendPlugins: [customPgOmitArchived("archived")],
-    graphileBuildOptions: {
-      /* 👇👇👇 */
-      // What tables does the expression apply to?
-      pgArchivedTables: ["my_schema.my_table"],
-
-      // SQL expression that returns true if the row should be omitted
-      pgArchivedExpression: (sql, tableAlias) =>
-        sql.fragment`${tableAlias}.status = 'archived'`,
-      /* ☝️☝️☝️ */
-    },
-  }),
-);
+const preset: GraphileConfig.Preset = {
+  extends: [PostGraphileAmberPreset],
+  plugins: [custom("archived")],
+  schema: {
+    pgArchivedTables: ["my_schema.my_table"],
+    pgArchivedExpression: (sql, tableAlias) =>
+      sql.fragment`${tableAlias}.status = 'archived'`,
+  },
+};
 ```
 
 ## Behaviour
